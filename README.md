@@ -1,2 +1,2 @@
-# mutation2seq
-Tool that takes gene symbol and protein change and returns DNA sequence
+# genefeatures
+Genefeatures is a tool that is used for working with gtf files.

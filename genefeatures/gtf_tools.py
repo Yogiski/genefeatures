@@ -1,7 +1,7 @@
 from collections import OrderedDict
-import numpy as np
 
 class GtfGff:
+
 
     def __init__(self):
         self._record_hashes = []
@@ -57,7 +57,6 @@ class GtfGff:
         hashes = self.attribute_index.get(attribute, {}).get(value, [])
         return [self.records[h] for h in hashes]
 
-    
     def __getitem__(self, idx):
 
         if type(idx) not in (int, slice, list):

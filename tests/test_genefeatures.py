@@ -9,20 +9,17 @@ class TestGtfGff(unittest.TestCase):
         self.empty = gf.GtfGff()
         self.gtf = gf.parse_gtf("tests/data/test_hs_grch38.gtf")
 
-
     def test_init(self):
 
         self.assertEqual(len(self.empty), 0)
         self.assertTrue(isinstance(self.empty, gf.GtfGff))
     
-
     def test_parse(self):
 
         self.assertEqual(type(self.gtf), gf.GtfGff)
         self.assertGreater(len(self.gtf), 0)
         full = gf.parse_gtf("tests/data/test_hs_grch38.gtf", gtf = self.empty)
         self.assertGreater(len(full), 0)
-
 
     def test_getitem(self):
 
@@ -35,14 +32,12 @@ class TestGtfGff(unittest.TestCase):
         print(context.exception)
         self.assertEqual(str(context.exception), f"Expected types int, slice, or list; got '{idx}' of type: {type(idx)}")
 
-
     def test_get_records_by_feature(self):
 
         records = self.gtf.get_records_by_feature("CDS")
         self.assertTrue(isinstance(records, list))
         feature = [d["feature"] for d in records]
         self.assertEqual(len(set(feature)), 1)
-
 
     def test_get_records_by_seqname(self):
 
@@ -55,7 +50,6 @@ class TestGtfGff(unittest.TestCase):
         self.assertEqual(len(set(seqname)), 1)
         int_seqname = self.gtf.get_records_by_seqname(1)
         self.assertGreater(len(int_seqname), 0)
-
 
     def test_get_records_by_attribute(self):
 

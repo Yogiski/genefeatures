@@ -1,1 +1,24 @@
-
+# packages in environment at /opt/homebrew/Caskroom/mambaforge/base/envs/gf:
+#
+# Name                    Version                   Build  Channel
+bzip2                     1.0.8                h80987f9_6  
+ca-certificates           2024.3.11            hca03da5_0  
+expat                     2.6.2                h313beb8_0  
+iniconfig                 1.1.1              pyhd3eb1b0_0  
+libcxx                    14.0.6               h848a8c0_0  
+libffi                    3.4.4                hca03da5_1  
+ncurses                   6.4                  h313beb8_0  
+openssl                   3.0.13               h1a28f6b_1  
+packaging                 23.2            py312hca03da5_0  
+pip                       23.3.1          py312hca03da5_0  
+pluggy                    1.0.0           py312hca03da5_1  
+pytest                    7.4.0           py312hca03da5_0  
+python                    3.12.3               h99e199e_0  
+readline                  8.2                  h1a28f6b_0  
+setuptools                68.2.2          py312hca03da5_0  
+sqlite                    3.45.3               h80987f9_0  
+tk                        8.6.12               hb8d0fd4_0  
+tzdata                    2024a                h04d1e81_0  
+wheel                     0.43.0          py312hca03da5_0  
+xz                        5.4.6                h80987f9_1  
+zlib                      1.2.13               h18a0788_1  

@@ -1,10 +1,11 @@
 from collections import OrderedDict
+import numpy as np
 
 class GtfGff:
 
     def __init__(self):
         self._record_hashes = []
-        self.records  = {}
+        self.records = OrderedDict()
         self.feature_index = {}
         self.seqname_index = {}
         self.attribute_index = {}
@@ -21,8 +22,8 @@ class GtfGff:
         if  record_hash == None:
             record_hash = hash(str(record))
         
-        self._record_hashs.append(record_hash)
-        self.record[record_hash] = record
+        self._record_hashes.append(record_hash)
+        self.records[record_hash] = record
             
         feature_type = record["feature"]
         if feature_type not in self.feature_index.keys():
@@ -42,8 +43,40 @@ class GtfGff:
                 self.attribute_index[attribute][value] = []
             self.attribute_index[attribute][value].append(record_hash)
     
-    def __getitem__(self, record_num):
-        return self.records[self._record_hashes[record_num]]
+    def get_records_by_feature(self, feature_type):
+        hashes = self.feature_index.get(feature_type, [])
+        return [self.records[h] for h in hashes]
+    
+    def get_records_by_seqname(self, seqname):
+        if isinstance(seqname, int):
+            seqname = str(seqname)
+        hashes = self.seqname_index.get(seqname, [])
+        return [self.records[h] for h in hashes]
+    
+    def get_records_by_attribute(self, attribute, value):
+        hashes = self.attribute_index.get(attribute, {}).get(value, [])
+        return [self.records[h] for h in hashes]
+
+    
+    def __getitem__(self, idx):
+
+        if type(idx) not in (int, slice, list):
+            raise TypeError(f"Expected types int, slice, or list; got '{idx}' of type: {type(idx)}") 
+
+        if isinstance(idx, int):
+            return self.records[self._record_hashes[idx]]
+
+        if isinstance(idx, slice):
+            records = [
+                self.records[self._record_hashes[i]] for i in range(
+                    idx.start,
+                    idx.stop,
+                )
+            ] 
+            return records
+        
+        if isinstance(idx, list):
+            return [self.records[self._record_hashes[i]] for i in idx]
     
     def __len__(self):
         return len(self._record_hashes)
@@ -68,7 +101,7 @@ def parse_gtf(filename, gtf = None):
     else:
         assert type(gtf) == GtfGff, f"gtf provided is not {GtfGff}, {type(gtf)} found\n"
     
-    with open(self.source, 'r') as file:
+    with open(filename, 'r') as file:
         for line in file:
 
             # Save comment lines as attributes
@@ -100,4 +133,6 @@ def parse_gtf(filename, gtf = None):
                 'attributes': attributes
             }
             gtf.add_record(record, linetype = "record")
+    
+    return gtf
 

@@ -4,6 +4,7 @@ class GtfGff:
 
 
     def __init__(self):
+
         self._record_hashes = []
         self.records = OrderedDict()
         self.feature_index = {}
@@ -11,13 +12,14 @@ class GtfGff:
         self.attribute_index = {}
         self.metadata = {}
     
+
     def add_record(self, record: dict, linetype: str = "record", record_hash: int = None):
 
         if linetype == "meta":
             self.metadata.update(record)
             return
 
-        if type(record) != dict:
+        if not isinstance(record, dict):
             raise TypeError
         if  record_hash == None:
             record_hash = hash(str(record))
@@ -43,24 +45,40 @@ class GtfGff:
                 self.attribute_index[attribute][value] = []
             self.attribute_index[attribute][value].append(record_hash)
     
-    def get_records_by_feature(self, feature_type):
-        hashes = self.feature_index.get(feature_type, [])
-        return [self.records[h] for h in hashes]
     
-    def get_records_by_seqname(self, seqname):
-        if isinstance(seqname, int):
-            seqname = str(seqname)
-        hashes = self.seqname_index.get(seqname, [])
-        return [self.records[h] for h in hashes]
+    @staticmethod
+    def _lookup_hash(index: dict, keys: str | list):
+        if isinstance(keys, str):
+            return index.get(keys, [])
+        else:
+            return list(set(h for key in keys for h in index.get(key)))
     
-    def get_records_by_attribute(self, attribute, value):
-        hashes = self.attribute_index.get(attribute, {}).get(value, [])
-        return [self.records[h] for h in hashes]
+    def _get_records(self, hashes: int | list | set) -> list:
+        if isinstance(hashes, int):
+            return [self.records[hashes]]
+        else:
+            return [self.records[h] for h in hashes]
+    
 
+    def get_records_by_feature(self, feature_type: str | list) -> list:
+        return self._get_records(self._lookup_hash(self.feature_index, feature_type))
+
+    def get_records_by_seqname(self, seqname: str | list) -> list:
+        return self._get_records(self._lookup_hash(self.seqname_index, seqname))
+
+    def get_records_by_attribute(self, lookup_dict: dict) -> list:
+        hashes = []
+        for k, v in lookup_dict.items():
+            hashes += self._lookup_hash(self.attribute_index[k], v)
+        return self._get_records(set(hashes))
+
+        
     def __getitem__(self, idx):
 
         if type(idx) not in (int, slice, list):
-            raise TypeError(f"Expected types int, slice, or list; got '{idx}' of type: {type(idx)}") 
+            raise TypeError(
+                f"Expected types int, slice, or list; got '{idx}' of type: {type(idx)}"
+            ) 
 
         if isinstance(idx, int):
             return self.records[self._record_hashes[idx]]
@@ -77,6 +95,7 @@ class GtfGff:
         if isinstance(idx, list):
             return [self.records[self._record_hashes[i]] for i in idx]
     
+
     def __len__(self):
         return len(self._record_hashes)
 
@@ -110,6 +129,8 @@ def parse_gtf(filename, gtf = None):
                 gtf.add_record(record, linetype = "meta")
                 continue
 
+            # make hash of record
+            record_hash = hash(line)
             # Split line by tab
             fields = line.strip().split('\t')
             # Parse attributes
@@ -131,7 +152,7 @@ def parse_gtf(filename, gtf = None):
                 'frame': fields[7],
                 'attributes': attributes
             }
-            gtf.add_record(record, linetype = "record")
+            gtf.add_record(record, linetype = "record", record_hash = record_hash)
     
     return gtf
 

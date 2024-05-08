@@ -1,4 +1,8 @@
+import re
+from typing import Type, TypeVar
 from collections import OrderedDict
+
+gtf = TypeVar("gtf", bound = "GtfGff")
 
 class GtfGff:
 
@@ -47,17 +51,41 @@ class GtfGff:
         hashes = self.feature_index.get(feature_type, [])
         return [self.records[h] for h in hashes]
     
-    def get_records_by_seqname(self, seqname):
-        if isinstance(seqname, int):
-            seqname = str(seqname)
-        hashes = self.seqname_index.get(seqname, [])
-        return [self.records[h] for h in hashes]
+    @staticmethod
+    def _lookup_hash(index: dict, keys: str | list):
+        if keys is None:
+            return []
+        if isinstance(keys, str):
+            return index.get(keys, [])
+        else:
+            return list(set(h for key in keys for h in index.get(key)))
     
-    def get_records_by_attribute(self, attribute, value):
-        hashes = self.attribute_index.get(attribute, {}).get(value, [])
-        return [self.records[h] for h in hashes]
+    def _lookup_attribute_hashes(self, lookup_dict):
+        hashes = []
+        for k, v in lookup_dict.items():
+            hashes += self._lookup_hash(self.attribute_index[k], v)
+        return hashes
 
-    def __getitem__(self, idx):
+    
+    def _get_records(self, hashes: int | list | set) -> list:
+        if isinstance(hashes, int):
+            return [self.records[hashes]]
+        else:
+            return [self.records[h] for h in hashes]
+    
+
+    def get_records_by_feature(self, feature_type: str | list) -> list:
+        return self._get_records(self._lookup_hash(self.feature_index, feature_type))
+
+    def get_records_by_seqname(self, seqname: str | list) -> list:
+        return self._get_records(self._lookup_hash(self.seqname_index, seqname))
+
+    def get_records_by_attribute(self, lookup_dict: dict) -> list:
+        hashes = self._lookup_attribute_hashes(lookup_dict)
+        return self._get_records(set(hashes))
+
+        
+    def __getitem__(self, idx: int | slice | list ):
 
         if type(idx) not in (int, slice, list):
             raise TypeError(f"Expected types int, slice, or list; got '{idx}' of type: {type(idx)}") 
@@ -76,9 +104,57 @@ class GtfGff:
         
         if isinstance(idx, list):
             return [self.records[self._record_hashes[i]] for i in idx]
-    
+
     def __len__(self):
         return len(self._record_hashes)
+    
+    @classmethod
+    def gtf_gff_from_records(cls: Type[gtf], records) -> gtf:
+
+        new_gtf = cls()
+        if isinstance(records, dict):
+            new_gtf.add_record(records)
+        else:
+            for r in records:
+                new_gtf.add_record(r)
+        return new_gtf
+    
+
+    def _process_query(self, conditions: dict, count = 0) -> list:
+
+        count += 1
+        hashes = []
+        for key, value in conditions.items():
+
+            if key == "AND":
+                processed = self._process_query(value, count = count)
+                new_hashes = set(processed.pop(0))
+                hashes.append(new_hashes.intersection(*processed))
+
+            elif key == "OR":
+                processed = [self._process_query(v, count = count)[0] for v in value] 
+                processed = [item for sublist in processed for item in sublist]
+                hashes.append(processed)
+
+            elif key == "NOT":
+                processed = self._process_query(value, count = count)[0]
+                new_hashes = []
+                for sub in hashes:
+                    new_hashes.append(set(sub) - set(processed))
+                hashes = new_hashes
+
+            if key == "seqname":
+                hashes.append(self._lookup_hash(self.seqname_index, value))
+            elif key == "feature":
+                hashes.append(self._lookup_hash(self.feature_index, value))
+            elif key == "attributes":
+                hashes.append(self._lookup_attribute_hashes(value))
+
+        if count == 1:
+            hashes = hashes[0]
+        
+        return hashes
+
 
 
     

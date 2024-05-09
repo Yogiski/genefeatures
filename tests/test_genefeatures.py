@@ -72,7 +72,7 @@ class TestGtfGff(unittest.TestCase):
         new_gtf = self.gtf.gtf_gff_from_records(self.gtf[0:10])
         self.assertEqual(len(new_gtf), 10)
     
-    def test_process_query(self):
+    def test_process_query_single_operator(self):
 
         gtf = self.gtf
         condition = {"AND":
@@ -85,6 +85,19 @@ class TestGtfGff(unittest.TestCase):
         attrs = [r["attributes"]["transcript_id"] for r in records]
         self.assertEqual(len(set(attrs)), 1)
 
+        condition = {"AND":
+            {"feature": "start_codon", "attributes": {"transcript_id": ["ENST00000511072", "ENST00000378391"]}}
+        }
+        hashes = gtf._process_query(condition)
+        records = gtf._get_records(hashes)
+        feat = [r["feature"] for r in records]
+        self.assertEqual(len(set(feat)), 1)
+        attrs = [r["attributes"]["transcript_id"] for r in records]
+        self.assertEqual(len(set(attrs)), 2)
+    
+    def test_process_query_or_logic(self):
+
+        gtf = self.gtf
         condition = {
             "OR":[
                 {"AND": {"feature": "start_codon", "attributes": {"transcript_id": "ENST00000511072"}}},
@@ -114,6 +127,9 @@ class TestGtfGff(unittest.TestCase):
         self.assertEqual(len(set(feat)), 1)
         self.assertEqual(len(set(attrs)), 2)
 
+    def test_process_query_not_logic(self):
+
+        gtf = self.gtf
         condition = {
             "feature": "start_codon",
             "NOT": {"attributes": {"transcript_id": "ENST00000511072"}}

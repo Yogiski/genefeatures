@@ -15,6 +15,7 @@ class GtfGff:
         self.attribute_index = {}
         self.metadata = {}
     
+
     def add_record(self, record: dict, linetype: str = "record", record_hash: int = None):
 
         if linetype == "meta":
@@ -47,10 +48,12 @@ class GtfGff:
                 self.attribute_index[attribute][value] = []
             self.attribute_index[attribute][value].append(record_hash)
     
+
     def get_records_by_feature(self, feature_type):
         hashes = self.feature_index.get(feature_type, [])
         return [self.records[h] for h in hashes]
     
+
     @staticmethod
     def _lookup_hash(index: dict, keys: str | list):
         if keys is None:
@@ -60,6 +63,7 @@ class GtfGff:
         else:
             return list(set(h for key in keys for h in index.get(key)))
     
+
     def _lookup_attribute_hashes(self, lookup_dict):
         hashes = []
         for k, v in lookup_dict.items():
@@ -77,10 +81,12 @@ class GtfGff:
     def get_records_by_feature(self, feature_type: str | list) -> list:
         return self._get_records(self._lookup_hash(self.feature_index, feature_type))
 
+
     def get_records_by_seqname(self, seqname: str | int | list) -> list:
         if isinstance(seqname, int):
             seqname = str(seqname)
         return self._get_records(self._lookup_hash(self.seqname_index, seqname))
+
 
     def get_records_by_attribute(self, lookup_dict: dict) -> list:
         hashes = self._lookup_attribute_hashes(lookup_dict)
@@ -107,8 +113,10 @@ class GtfGff:
         if isinstance(idx, list):
             return [self.records[self._record_hashes[i]] for i in idx]
 
+
     def __len__(self):
         return len(self._record_hashes)
+    
     
     @classmethod
     def gtf_gff_from_records(cls: Type[gtf], records) -> gtf:
@@ -121,39 +129,61 @@ class GtfGff:
                 new_gtf.add_record(r)
         return new_gtf
     
+    def _process_query_and(self, value, depth = 0):
+        processed = self._process_query(value, depth = depth)
+        new_hashes = set(processed.pop(0))
+        return new_hashes.intersection(*processed)
 
-    def _process_query(self, conditions: dict, count = 0) -> list:
+    def _process_query_or(self, value, depth = 0):
+        processed = [self._process_query(v, depth = depth)[0] for v in value] 
+        return [item for sublist in processed for item in sublist]
 
-        count += 1
+    def _process_query_not(self, value, hashes, depth = 0):
+        processed = self._process_query(value, depth = depth)[0]
+        new_hashes = []
+        for sub in hashes:
+            new_hashes.append(set(sub) - set(processed))
+        return new_hashes
+    
+
+    def _process_query(self, conditions: dict, depth = 0) -> list:
+
+        depth += 1
         hashes = []
-        for key, value in conditions.items():
+        try:
+            for key, value in conditions.items():
 
-            if key == "AND":
-                processed = self._process_query(value, count = count)
-                new_hashes = set(processed.pop(0))
-                hashes.append(new_hashes.intersection(*processed))
+                if key == "AND":
+                    hashes.append(self._process_query_and(value, depth))
 
-            elif key == "OR":
-                processed = [self._process_query(v, count = count)[0] for v in value] 
-                processed = [item for sublist in processed for item in sublist]
-                hashes.append(processed)
+                elif key == "OR":
+                    hashes.append(self._process_query_or(value, depth))
 
-            elif key == "NOT":
-                processed = self._process_query(value, count = count)[0]
-                new_hashes = []
-                for sub in hashes:
-                    new_hashes.append(set(sub) - set(processed))
-                hashes = new_hashes
+                elif key == "NOT":
+                    hashes = self._process_query_not(value, hashes, depth)
 
-            if key == "seqname":
-                hashes.append(self._lookup_hash(self.seqname_index, value))
-            elif key == "feature":
-                hashes.append(self._lookup_hash(self.feature_index, value))
-            elif key == "attributes":
-                hashes.append(self._lookup_attribute_hashes(value))
+                elif key == "seqname":
+                    hashes.append(self._lookup_hash(self.seqname_index, value))
 
-        if count == 1:
-            hashes = hashes[0]
+                elif key == "feature":
+                    hashes.append(self._lookup_hash(self.feature_index, value))
+
+                elif key == "attributes":
+                    hashes.append(self._lookup_attribute_hashes(value))
+
+                else:
+                    raise ValueError(f"Invalid condition key: {key}")
+
+            if depth == 1:
+                hashes = hashes[0]
+
+        except KeyError as e:
+            print(f"KeyError: {e}. Please check if the provided keys exist in the indices.")
+            return []
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return []
         
         return hashes
 

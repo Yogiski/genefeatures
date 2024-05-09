@@ -48,17 +48,18 @@ class TestGtfGff(unittest.TestCase):
         self.assertTrue(isinstance(records, list))
         seqname = [d["seqname"] for d in records]
         self.assertEqual(len(set(seqname)), 1)
+
+        # take int as arg
         int_seqname = self.gtf.get_records_by_seqname(1)
         self.assertGreater(len(int_seqname), 0)
 
     def test_get_records_by_attribute(self):
 
-        records = self.gtf.get_records_by_attribute("gene_name", "PRDM16")
+        records = self.gtf.get_records_by_attribute({"gene_name": "PRDM16"})
         self.assertGreater(len(records), 0)
         feature = [d["feature"] for d in records]
         self.assertGreater(len(set(feature)), 0)
     
-
         records = self.gtf.get_records_by_attribute({"transcript_id": "ENST00000511072"})
         ids = [r["attributes"]["transcript_id"] for r in records]
         self.assertEqual(len(set(ids)), 1)

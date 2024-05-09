@@ -77,7 +77,9 @@ class GtfGff:
     def get_records_by_feature(self, feature_type: str | list) -> list:
         return self._get_records(self._lookup_hash(self.feature_index, feature_type))
 
-    def get_records_by_seqname(self, seqname: str | list) -> list:
+    def get_records_by_seqname(self, seqname: str | int | list) -> list:
+        if isinstance(seqname, int):
+            seqname = str(seqname)
         return self._get_records(self._lookup_hash(self.seqname_index, seqname))
 
     def get_records_by_attribute(self, lookup_dict: dict) -> list:
@@ -154,7 +156,6 @@ class GtfGff:
             hashes = hashes[0]
         
         return hashes
-
 
 
     

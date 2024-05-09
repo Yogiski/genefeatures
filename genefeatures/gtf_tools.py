@@ -1,4 +1,8 @@
+import re
+from typing import Type, TypeVar
 from collections import OrderedDict
+
+gtf = TypeVar("gtf", bound = "GtfGff")
 
 class GtfGff:
 
@@ -45,20 +49,45 @@ class GtfGff:
                 self.attribute_index[attribute][value] = []
             self.attribute_index[attribute][value].append(record_hash)
     
+<<<<<<< HEAD
     
     @staticmethod
     def _lookup_hash(index: dict, keys: str | list):
+=======
+
+    def get_records_by_feature(self, feature_type):
+        hashes = self.feature_index.get(feature_type, [])
+        return [self.records[h] for h in hashes]
+    
+
+    @staticmethod
+    def _lookup_hash(index: dict, keys: str | list):
+        if keys is None:
+            return []
+>>>>>>> 1-gtfgff-filter-function
         if isinstance(keys, str):
             return index.get(keys, [])
         else:
             return list(set(h for key in keys for h in index.get(key)))
     
+<<<<<<< HEAD
+=======
+
+    def _lookup_attribute_hashes(self, lookup_dict):
+        hashes = []
+        for k, v in lookup_dict.items():
+            hashes += self._lookup_hash(self.attribute_index[k], v)
+        return hashes
+
+    
+>>>>>>> 1-gtfgff-filter-function
     def _get_records(self, hashes: int | list | set) -> list:
         if isinstance(hashes, int):
             return [self.records[hashes]]
         else:
             return [self.records[h] for h in hashes]
     
+<<<<<<< HEAD
 
     def get_records_by_feature(self, feature_type: str | list) -> list:
         return self._get_records(self._lookup_hash(self.feature_index, feature_type))
@@ -74,6 +103,25 @@ class GtfGff:
 
         
     def __getitem__(self, idx):
+=======
+
+    def get_records_by_feature(self, feature_type: str | list) -> list:
+        return self._get_records(self._lookup_hash(self.feature_index, feature_type))
+
+
+    def get_records_by_seqname(self, seqname: str | int | list) -> list:
+        if isinstance(seqname, int):
+            seqname = str(seqname)
+        return self._get_records(self._lookup_hash(self.seqname_index, seqname))
+
+
+    def get_records_by_attribute(self, lookup_dict: dict) -> list:
+        hashes = self._lookup_attribute_hashes(lookup_dict)
+        return self._get_records(set(hashes))
+
+        
+    def __getitem__(self, idx: int | slice | list ):
+>>>>>>> 1-gtfgff-filter-function
 
         if type(idx) not in (int, slice, list):
             raise TypeError(
@@ -94,10 +142,84 @@ class GtfGff:
         
         if isinstance(idx, list):
             return [self.records[self._record_hashes[i]] for i in idx]
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> 1-gtfgff-filter-function
 
     def __len__(self):
         return len(self._record_hashes)
+    
+    
+    @classmethod
+    def gtf_gff_from_records(cls: Type[gtf], records) -> gtf:
+
+        new_gtf = cls()
+        if isinstance(records, dict):
+            new_gtf.add_record(records)
+        else:
+            for r in records:
+                new_gtf.add_record(r)
+        return new_gtf
+    
+    def _process_query_and(self, value, depth = 0):
+        processed = self._process_query(value, depth = depth)
+        new_hashes = set(processed.pop(0))
+        return new_hashes.intersection(*processed)
+
+    def _process_query_or(self, value, depth = 0):
+        processed = [self._process_query(v, depth = depth)[0] for v in value] 
+        return [item for sublist in processed for item in sublist]
+
+    def _process_query_not(self, value, hashes, depth = 0):
+        processed = self._process_query(value, depth = depth)[0]
+        new_hashes = []
+        for sub in hashes:
+            new_hashes.append(set(sub) - set(processed))
+        return new_hashes
+    
+
+    def _process_query(self, conditions: dict, depth = 0) -> list:
+
+        depth += 1
+        hashes = []
+        try:
+            for key, value in conditions.items():
+
+                if key == "AND":
+                    hashes.append(self._process_query_and(value, depth))
+
+                elif key == "OR":
+                    hashes.append(self._process_query_or(value, depth))
+
+                elif key == "NOT":
+                    hashes = self._process_query_not(value, hashes, depth)
+
+                elif key == "seqname":
+                    hashes.append(self._lookup_hash(self.seqname_index, value))
+
+                elif key == "feature":
+                    hashes.append(self._lookup_hash(self.feature_index, value))
+
+                elif key == "attributes":
+                    hashes.append(self._lookup_attribute_hashes(value))
+
+                else:
+                    raise ValueError(f"Invalid condition key: {key}")
+
+            if depth == 1:
+                hashes = hashes[0]
+
+        except KeyError as e:
+            print(f"KeyError: {e}. Please check if the provided keys exist in the indices.")
+            return []
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            return []
+        
+        return hashes
 
 
     

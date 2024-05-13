@@ -21,6 +21,11 @@ jobs:
     - name: Install dependencies
       run: |
         conda env create --file environment.yml --name gf
+        apt-get install libbz2-dev
+        apt-get install zlib1g-dev
+        apt-get install libncurses5-dev 
+        apt-get install libncursesw5-dev
+        apt-get install liblzma-dev
         wget https://github.com/samtools/htslib/releases/download/1.20/htslib-1.20.tar.bz2
         tar -vxjf htslib-1.20.tar.bz2
         cd htslib-1.20

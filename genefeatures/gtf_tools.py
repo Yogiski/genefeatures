@@ -146,6 +146,28 @@ class GtfGff:
         return new_hashes
     
 
+    def query(self, conditions: str | dict, return_records = False) -> gtf:
+
+        if isinstance(conditions, str):
+            conditions = self._process_query_string(conditions)
+        
+        if isinstance(conditions, dict):
+
+            hashes = self._process_query(conditions)
+            records = self._get_records(hashes)
+
+            if return_records:
+                return records
+            else:
+                return self.gtf_gff_from_records(records)
+        else:
+            raise TypeError(f"expected types str or dict; recieved {conditons} of type {type(conditions)}")
+
+
+    def _process_query_string(self, query_string: str) -> dict: 
+        pass
+
+
     def _process_query(self, conditions: dict, depth = 0) -> list:
 
         depth += 1

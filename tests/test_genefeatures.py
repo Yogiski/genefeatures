@@ -1,5 +1,9 @@
 import unittest
+from typing import Type, TypeVar
 from genefeatures import gtf_tools as gf
+from genefeatures import fasta_tools as ft
+
+gtf_type = TypeVar("gtf", bound = "GtfGff")
 
 class TestGtfGff(unittest.TestCase):
 
@@ -172,6 +176,42 @@ class TestGtfGff(unittest.TestCase):
         attrs = [r["attributes"]["transcript_id"] for r in records]
         self.assertEqual(len(set(feat)), 1)
         self.assertEqual(len(set(attrs)), 2)
+
+    def test_query(self):
+        gtf = self.gtf
+        query = {
+            "AND":
+            {"feature": ["stop_codon", "start_codon"],
+            "attributes": {"gene_biotype": "protein_coding"}}
+        }
+        gtf_filt = gtf.query(query)
+        self.assertTrue(isinstance(gtf_filt, gf.GtfGff))
+        gtf_filt = gtf.query(query, return_records = True)
+        self.assertTrue(isinstance(gtf_filt, list))
+        self.assertTrue(isinstance(gtf_filt[0], dict))
+
+class TestFastaTools(unittest.TestCase):
+
+    def setUp(self):
+        self.fasta = "tests/data/Homo_sapiens.GRCh38.dna.chromosome.1.fa"
+
+    def test_fast_extract(self):
+        seqname = 1
+        start = 3069260
+        stop = 3069262
+        start_codon = ft.extract_seq(self.fasta, seqname, start, stop)
+        self.assertEqual(start_codon, "ATG")
+
+        tstart = 3069211
+        tstop = 3434342
+        transcript = ft.extract_seq(self.fasta, seqname, tstart, tstop)
+        nucleotides = set(transcript)
+        self.assertFalse("U" in nucleotides)
+        self.assertIn("G", nucleotides)
+        self.assertIn("C", nucleotides)
+        self.assertIn("A", nucleotides)
+        self.assertIn("T", nucleotides)
+
 
 
 if __name__ == '__main__':

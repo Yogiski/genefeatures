@@ -193,7 +193,7 @@ class TestGtfGff(unittest.TestCase):
 class TestFastaTools(unittest.TestCase):
 
     def setUp(self):
-        self.fasta = "tests/data/Homo_sapiens.GRCh38.dna.chromosome.1.fa"
+        self.fasta = "tests/data/trunc_hs.grch38.dna.chr1.fa"
 
     def test_fast_extract(self):
         seqname = 1

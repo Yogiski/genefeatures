@@ -186,6 +186,25 @@ class GtfGff:
             return []
         
         return hashes
+    
+
+    def _process_query_string(self):
+        pass
+    
+
+    def query(self, query: str | dict, return_records = False) -> gtf | dict:
+
+        if isinstance(query, str):
+            query = self._process_query_string(query)
+
+        hashes = self._process_query(query) 
+        records = self._get_records(hashes)
+
+        if return_records:
+            return records
+        else:
+            return self.gtf_gff_from_records(records)
+
 
 
     

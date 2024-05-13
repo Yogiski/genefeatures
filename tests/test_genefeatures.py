@@ -1,5 +1,6 @@
 import unittest
 from genefeatures import gtf_tools as gf
+from genefeatures import fasta_tools as ft
 
 class TestGtfGff(unittest.TestCase):
 
@@ -195,12 +196,12 @@ class TestFastaTools(unittest.TestCase):
         seqname = 1
         start = 3069260
         stop = 3069262
-        start_codon = ft.extract_seq(self.fasta, seqname, start, stop)
+        start_codon = ft.extract_sequence(self.fasta, seqname, start, stop)
         self.assertEqual(start_codon, "ATG")
 
         tstart = 3069211
         tstop = 3434342
-        transcript = ft.extract_seq(self.fasta, seqname, tstart, tstop)
+        transcript = ft.extract_sequence(self.fasta, seqname, tstart, tstop)
         nucleotides = set(transcript)
         self.assertFalse("U" in nucleotides)
         self.assertIn("G", nucleotides)

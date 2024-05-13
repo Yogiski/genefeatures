@@ -1,9 +1,5 @@
 import unittest
-from typing import Type, TypeVar
 from genefeatures import gtf_tools as gf
-from genefeatures import fasta_tools as ft
-
-gtf_type = TypeVar("gtf", bound = "GtfGff")
 
 class TestGtfGff(unittest.TestCase):
 

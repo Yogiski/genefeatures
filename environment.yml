@@ -26,5 +26,6 @@ dependencies:
   - zlib=1.2.13
   - pip:
     - intervaltree==3.1.0
+    - sortedcontainers==2.4.0
 
 prefix: /opt/homebrew/Caskroom/mambaforge/base/envs/gf

@@ -30,7 +30,6 @@ class TestGeneFeature(unittest.TestCase):
         ids = gf.transcript_ids
         self.assertIsInstance(gf.transcripts[ids[0]], IntervalTree)
         self.assertNotEqual(gf.transcripts[ids[0]], gf.transcripts[ids[1]])
-        self.assertTrue(False)
 
 if __name__ == '__main__':
     unittest.main()

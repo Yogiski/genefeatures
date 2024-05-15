@@ -24,4 +24,7 @@ dependencies:
   - wheel=0.43.0
   - xz=5.4.6
   - zlib=1.2.13
+  - pip:
+    - intervaltree=1.20
+
 prefix: /opt/homebrew/Caskroom/mambaforge/base/envs/gf

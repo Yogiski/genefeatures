@@ -119,4 +119,8 @@ class GeneFeature:
 
     def mutate(self, transcript, level, change):
         pass
+    
+    @classmethod
+    def from_fusion(cls):
+        pass
 

@@ -1,25 +1,23 @@
 import unittest
-from genefeatures import gtf_tools as gf
-from genefeatures import fasta_tools as ft
+from genefeatures import gtf_tools as gt
 
 class TestGtfGff(unittest.TestCase):
 
-
     def setUp(self):
 
-        self.empty = gf.GtfGff()
-        self.gtf = gf.parse_gtf("tests/data/test_hs_grch38.gtf")
+        self.empty = gt.GtfGff()
+        self.gtf = gt.parse_gtf("tests/data/test_hs_grch38.gtf")
 
     def test_init(self):
 
         self.assertEqual(len(self.empty), 0)
-        self.assertTrue(isinstance(self.empty, gf.GtfGff))
+        self.assertTrue(isinstance(self.empty, gt.GtfGff))
     
     def test_parse(self):
 
-        self.assertEqual(type(self.gtf), gf.GtfGff)
+        self.assertEqual(type(self.gtf), gt.GtfGff)
         self.assertGreater(len(self.gtf), 0)
-        full = gf.parse_gtf("tests/data/test_hs_grch38.gtf", gtf = self.empty)
+        full = gt.parse_gtf("tests/data/test_hs_grch38.gtf", gtf = self.empty)
         self.assertGreater(len(full), 0)
 
     def test_getitem(self):
@@ -100,7 +98,7 @@ class TestGtfGff(unittest.TestCase):
     def test_gtf_gff_from_records(self):
         new_gtf = self.gtf.gtf_gff_from_records(self.gtf[0])
         self.assertEqual(len(new_gtf), 1)
-        self.assertTrue(isinstance(new_gtf, gf.GtfGff))
+        self.assertTrue(isinstance(new_gtf, gt.GtfGff))
         new_gtf = self.gtf.gtf_gff_from_records(self.gtf[0:10])
         self.assertEqual(len(new_gtf), 10)
     
@@ -182,33 +180,16 @@ class TestGtfGff(unittest.TestCase):
             "attributes": {"gene_biotype": "protein_coding"}}
         }
         gtf_filt = gtf.query(query)
-        self.assertTrue(isinstance(gtf_filt, gf.GtfGff))
+        self.assertTrue(isinstance(gtf_filt, gt.GtfGff))
         gtf_filt = gtf.query(query, return_records = True)
         self.assertTrue(isinstance(gtf_filt, list))
         self.assertTrue(isinstance(gtf_filt[0], dict))
-
-class TestFastaTools(unittest.TestCase):
-
-    def setUp(self):
-        self.fasta = "tests/data/trunc_hs.grch38.dna.chr1.fa"
-
-    def test_fast_extract(self):
-        seqname = 1
-        start = 3069260
-        stop = 3069262
-        start_codon = ft.extract_sequence(self.fasta, seqname, start, stop)
-        self.assertEqual(start_codon, "ATG")
-
-        tstart = 3069211
-        tstop = 3434342
-        transcript = ft.extract_sequence(self.fasta, seqname, tstart, tstop)
-        nucleotides = set(transcript)
-        self.assertFalse("U" in nucleotides)
-        self.assertIn("G", nucleotides)
-        self.assertIn("C", nucleotides)
-        self.assertIn("A", nucleotides)
-        self.assertIn("T", nucleotides)
-
+    
+    def test_export_records(self):
+        recs = self.gtf.export_records()
+        self.assertTrue(isinstance(recs, list))
+        self.assertTrue(isinstance(recs[0], dict))
+        self.assertEqual(len(recs), len(self.gtf))
 
 
 if __name__ == '__main__':

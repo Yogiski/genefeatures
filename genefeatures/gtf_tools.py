@@ -2,6 +2,7 @@ import re
 from typing import Type, TypeVar
 from collections import OrderedDict
 
+
 gtf = TypeVar("gtf", bound = "GtfGff")
 
 class GtfGff:
@@ -204,6 +205,9 @@ class GtfGff:
             return records
         else:
             return self.gtf_gff_from_records(records)
+    
+    def export_records(self):
+        return list(self.records.values())
 
 
 

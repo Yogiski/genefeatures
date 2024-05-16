@@ -1,13 +1,14 @@
 from intervaltree import Interval, IntervalTree
-from typing import TypeVar
+from typing import Type, TypeVar
 from .gtf_tools import GtfGff
+from .sequence_tree import SequenceTree
 
 gtf = TypeVar("gtf", bound="GtfGff")
 
 
 class GeneFeature:
 
-    def __init__(self, records: dict | list[dict] | gtf = None):
+    def __init__(self, records: dict | list[dict] | Type[gtf] = None):
         self.locations = IntervalTree()
         self.transcript_ids = []
         self.gene_name = ""
@@ -20,7 +21,7 @@ class GeneFeature:
         else:
             self.add_records(records)
 
-    def add_records(self, records: list[dict] | gtf):
+    def add_records(self, records: list[dict] | Type[gtf]):
 
         if isinstance(records, GtfGff):
             records = records.export_records()
@@ -28,10 +29,8 @@ class GeneFeature:
             pass
         else:
             raise TypeError(
-                f"""
-                records argument must be a list[dict];
-                or GtfGff; got type {type(records)}
-                """
+                "records argument must be a list[dict] or GtfGff;"
+                f"got type {type(records)}"
             )
 
         for r in records:
@@ -53,10 +52,9 @@ class GeneFeature:
             else:
                 # don't allow multiple genes in one GeneFeature object
                 raise ValueError(
-                    f"""
-                    GeneFeature class only reperesents a single gene;
-                    given {self.gene_name} and {r["attributes"]["gene_name"]}
-                    """
+                    "GeneFeature class only represent a single gene;"
+                    f"given {self.gene_name} and"
+                    f"{r["attributes"]["gene_name"]}"
                 )
 
         elif r["feature"] == "transcript":
@@ -84,7 +82,7 @@ class GeneFeature:
 
         transcripts = {}
         for transcript_id in self.transcript_ids:
-            transcripts[transcript_id] = IntervalTree()
+            transcripts[transcript_id] = SequenceTree(seq_id=transcript_id)
 
         for inter in self.locations:
             # skip if no transcript_id
@@ -103,9 +101,13 @@ class GeneFeature:
             # make new transcript entry if one doesn't exist
             if inter_tid not in transcripts.keys():
                 self.transcript_ids.append(inter_tid)
-                transcripts[inter_tid] = IntervalTree(inter)
+                transcripts[inter_tid] = SequenceTree(
+                    seq_id=inter_tid,
+                    interval=inter
+                )
+            # add interval to sequence tree
+            transcripts[inter_tid].add_interval(inter)
 
-            transcripts[inter_tid].add(inter)
         self.transcripts = transcripts
 
     def get_sequence(self, transcript_id):

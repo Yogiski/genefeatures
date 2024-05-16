@@ -1,5 +1,5 @@
 import unittest
-from intervaltree import IntervalTree
+from genefeatures.sequence_tree import SequenceTree
 from genefeatures import gtf_tools as gt
 from genefeatures import gene_feature as gfeat
 
@@ -32,7 +32,7 @@ class TestGeneFeature(unittest.TestCase):
         gf = self.gf
         gf.partition_transcripts()
         ids = gf.transcript_ids
-        self.assertIsInstance(gf.transcripts[ids[0]], IntervalTree)
+        self.assertIsInstance(gf.transcripts[ids[0]], SequenceTree)
         self.assertNotEqual(gf.transcripts[ids[0]], gf.transcripts[ids[1]])
 
 

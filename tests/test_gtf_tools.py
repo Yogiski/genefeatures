@@ -205,6 +205,25 @@ class TestGtfGff(unittest.TestCase):
         self.assertTrue(isinstance(recs[0], dict))
         self.assertEqual(len(recs), len(self.gtf))
 
+    def test_remove_record(self):
+        gtf = gt.parse_gtf("tests/data/test_hs_grch38.gtf")
+        rec_hash = gtf._record_hashes[0]
+        record = hash(str(gtf[0]))
+        gtf._remove_record(rec_hash)
+
+        self.assertNotIn(rec_hash, gtf._record_hashes)
+        self.assertNotEqual(record, hash(str(gtf[0])))
+
+    def test_remove_empty(self):
+        gtf = gt.parse_gtf("tests/data/test_hs_grch38.gtf")
+        gtf.remove_empty_field("start")
+        recs = gtf.export_records()
+        try:
+            for r in recs:
+                r["start"]
+        except KeyError:
+            self.fail("KeyError raised after running remove_empty_fields")
+
 
 if __name__ == '__main__':
     unittest.main()

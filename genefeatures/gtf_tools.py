@@ -96,10 +96,8 @@ class GtfGff:
 
         if type(idx) not in (int, slice, list):
             raise TypeError(
-                f"""
-                Expected types int, slice, or list;
-                got '{idx}' of type: {type(idx)}
-                """
+                "Expected types int, slice, or list;"
+                f"got '{idx}' of type: {type(idx)}"
             )
 
         if isinstance(idx, int):
@@ -133,18 +131,24 @@ class GtfGff:
 
     def _process_query_and(self, value, depth=0):
         processed = self._process_query(value, depth=depth)
+        processed = [set(lis) for lis in processed if isinstance(lis, list)]
         new_hashes = set(processed.pop(0))
-        return new_hashes.intersection(*processed)
+        new_hashes = new_hashes.intersection(*processed)
+        return new_hashes
 
     def _process_query_or(self, value, depth=0):
         processed = [self._process_query(v, depth=depth)[0] for v in value]
         return [item for sublist in processed for item in sublist]
 
     def _process_query_not(self, value, hashes, depth=0):
+
         processed = self._process_query(value, depth=depth)[0]
+        if hashes == []:
+            hashes = [self._record_hashes]
         new_hashes = []
         for sub in hashes:
             new_hashes.append(set(sub) - set(processed))
+
         return new_hashes
 
     def _process_query(self, conditions: dict, depth=0) -> list:
@@ -180,10 +184,8 @@ class GtfGff:
 
         except KeyError as e:
             print(
-                f"""
-                KeyError: {e}.
-                Please check if the provided keys exist in the indices.
-                """
+                f"KeyError: {e}."
+                "Please check if the provided keys exist in the indices."
                 )
             return []
 
@@ -210,7 +212,32 @@ class GtfGff:
             return self.gtf_gff_from_records(records)
 
     def export_records(self):
-        return list(self.records.values())
+        # list comprehension ensures a copy of each record is made
+        return [dict(record) for record in self.records.values()]
+
+    def _remove_record(self, record_hash):
+
+        record = self.records[record_hash]
+        self.feature_index[record["feature"]].remove(record_hash)
+        self.seqname_index[record["seqname"]].remove(record_hash)
+        for key, value in record["attributes"].items():
+            self.attribute_index[key][value].remove(record_hash)
+        self._record_hashes.remove(record_hash)
+        del self.records[record_hash]
+
+    def remove_empty_field(self, field: str | tuple | list):
+        empty = []
+        for h in self._record_hashes:
+            try:
+                if isinstance(field, str):
+                    self.records[h][field]
+                elif isinstance(field, tuple or list):
+                    self.records[h][field[0]][field[0]]
+            except KeyError:
+                empty.append(h)
+
+        for e in empty:
+            self._remove_record(e)
 
 
 def parse_gtf(filename, gtf=None):

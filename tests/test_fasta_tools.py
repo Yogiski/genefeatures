@@ -1,6 +1,7 @@
 import unittest
 from genefeatures import fasta_tools as ft
 
+
 class TestFastaTools(unittest.TestCase):
 
     def setUp(self):
@@ -22,6 +23,7 @@ class TestFastaTools(unittest.TestCase):
         self.assertIn("C", nucleotides)
         self.assertIn("A", nucleotides)
         self.assertIn("T", nucleotides)
+
 
 if __name__ == '__main__':
     unittest.main()

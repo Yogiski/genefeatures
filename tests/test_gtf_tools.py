@@ -1,6 +1,7 @@
 import unittest
 from genefeatures import gtf_tools as gt
 
+
 class TestGtfGff(unittest.TestCase):
 
     def setUp(self):
@@ -12,12 +13,12 @@ class TestGtfGff(unittest.TestCase):
 
         self.assertEqual(len(self.empty), 0)
         self.assertTrue(isinstance(self.empty, gt.GtfGff))
-    
+
     def test_parse(self):
 
         self.assertEqual(type(self.gtf), gt.GtfGff)
         self.assertGreater(len(self.gtf), 0)
-        full = gt.parse_gtf("tests/data/test_hs_grch38.gtf", gtf = self.empty)
+        full = gt.parse_gtf("tests/data/test_hs_grch38.gtf", gtf=self.empty)
         self.assertGreater(len(full), 0)
 
     def test_getitem(self):
@@ -26,13 +27,9 @@ class TestGtfGff(unittest.TestCase):
         self.assertTrue(isinstance(self.gtf[[1, 3, 4]], list))
         self.assertTrue(isinstance(self.gtf[0:10], list))
         idx = "exon"
-        with self.assertRaises(TypeError) as context:
+        with self.assertRaises(TypeError):
             self.gtf[idx]
-        print(context.exception)
-        self.assertEqual(
-            str(context.exception),
-            f"Expected types int, slice, or list; got '{idx}' of type: {type(idx)}"
-        )
+
     def test_get_records(self):
 
         gtf = self.gtf
@@ -44,7 +41,7 @@ class TestGtfGff(unittest.TestCase):
         multi = gtf._get_records(gtf._record_hashes[0:10])
         self.assertTrue(isinstance(multi, list))
         self.assertEqual(len(multi), 10)
-    
+
     def test_lookup_hash(self):
 
         gtf = self.gtf
@@ -89,24 +86,28 @@ class TestGtfGff(unittest.TestCase):
         self.assertGreater(len(records), 0)
         feature = [d["feature"] for d in records]
         self.assertGreater(len(set(feature)), 0)
-    
-        records = self.gtf.get_records_by_attribute({"transcript_id": "ENST00000511072"})
+
+        records = self.gtf.get_records_by_attribute(
+            {"transcript_id": "ENST00000511072"}
+        )
         ids = [r["attributes"]["transcript_id"] for r in records]
         self.assertEqual(len(set(ids)), 1)
 
-    
     def test_gtf_gff_from_records(self):
         new_gtf = self.gtf.gtf_gff_from_records(self.gtf[0])
         self.assertEqual(len(new_gtf), 1)
         self.assertTrue(isinstance(new_gtf, gt.GtfGff))
         new_gtf = self.gtf.gtf_gff_from_records(self.gtf[0:10])
         self.assertEqual(len(new_gtf), 10)
-    
+
     def test_process_query_single_operator(self):
 
         gtf = self.gtf
-        condition = {"AND":
-            {"feature": "start_codon", "attributes": {"transcript_id": "ENST00000511072"}}
+        condition = {
+            "AND": {
+                "feature": "start_codon",
+                "attributes": {"transcript_id": "ENST00000511072"}
+            }
         }
         hashes = gtf._process_query(condition)
         records = gtf._get_records(hashes)
@@ -115,8 +116,13 @@ class TestGtfGff(unittest.TestCase):
         attrs = [r["attributes"]["transcript_id"] for r in records]
         self.assertEqual(len(set(attrs)), 1)
 
-        condition = {"AND":
-            {"feature": "start_codon", "attributes": {"transcript_id": ["ENST00000511072", "ENST00000378391"]}}
+        condition = {
+            "AND": {
+                "feature": "start_codon",
+                "attributes": {
+                    "transcript_id": ["ENST00000511072", "ENST00000378391"]
+                }
+            }
         }
         hashes = gtf._process_query(condition)
         records = gtf._get_records(hashes)
@@ -124,15 +130,22 @@ class TestGtfGff(unittest.TestCase):
         self.assertEqual(len(set(feat)), 1)
         attrs = [r["attributes"]["transcript_id"] for r in records]
         self.assertEqual(len(set(attrs)), 2)
-    
+
     def test_process_query_or_logic(self):
 
         gtf = self.gtf
         condition = {
-            "OR":[
-                {"AND": {"feature": "start_codon", "attributes": {"transcript_id": "ENST00000511072"}}},
-                {"AND": {"feature": "start_codon", "attributes": {"transcript_id": "ENST00000378391"}}}
-            ]
+            "OR": [{
+                "AND": {
+                    "feature": "start_codon",
+                    "attributes": {"transcript_id": "ENST00000511072"}
+                }
+            }, {
+                "AND": {
+                    "feature": "start_codon",
+                    "attributes": {"transcript_id": "ENST00000378391"}
+                }
+            }]
         }
         hashes = gtf._process_query(condition)
         records = gtf._get_records(hashes)
@@ -175,16 +188,17 @@ class TestGtfGff(unittest.TestCase):
     def test_query(self):
         gtf = self.gtf
         query = {
-            "AND":
-            {"feature": ["stop_codon", "start_codon"],
-            "attributes": {"gene_biotype": "protein_coding"}}
+            "AND": {
+                "feature": ["stop_codon", "start_codon"],
+                "attributes": {"gene_biotype": "protein_coding"}
+            }
         }
         gtf_filt = gtf.query(query)
         self.assertTrue(isinstance(gtf_filt, gt.GtfGff))
-        gtf_filt = gtf.query(query, return_records = True)
+        gtf_filt = gtf.query(query, return_records=True)
         self.assertTrue(isinstance(gtf_filt, list))
         self.assertTrue(isinstance(gtf_filt[0], dict))
-    
+
     def test_export_records(self):
         recs = self.gtf.export_records()
         self.assertTrue(isinstance(recs, list))

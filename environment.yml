@@ -11,7 +11,7 @@ dependencies:
   - libcxx=14.0.6
   - libffi=3.4.4
   - ncurses=6.4
-  - openssl=3.0.13
+  - openssl=3.2.1
   - packaging=23.2
   - pip=23.3.1
   - pluggy=1.0.0

@@ -1,6 +1,5 @@
 import unittest
 from Bio.Seq import Seq
-from intervaltree import Interval, IntervalTree
 from genefeatures.sequence_tree import SequenceTree
 from genefeatures import gtf_tools as gt
 
@@ -61,7 +60,7 @@ class TestSequenceTree(unittest.TestCase):
         seq = st.sequence
         self.assertIsInstance(seq, Seq)
         self.assertIn("A" or "C" or "G" or "T", seq)
-    
+
     def test_get_coding_seq(self):
         st = SequenceTree.from_gtf_gff(self.gtf)
         st.read_sequence(self.fasta)

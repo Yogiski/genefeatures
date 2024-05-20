@@ -1,4 +1,6 @@
 import unittest
+from Bio.Seq import Seq
+from intervaltree import Interval, IntervalTree
 from genefeatures.sequence_tree import SequenceTree
 from genefeatures import gtf_tools as gt
 
@@ -51,11 +53,25 @@ class TestSequenceTree(unittest.TestCase):
     def test_make_seq_index(self):
         st = SequenceTree()
         seq_idx = st._make_seq_index(500, 510)
-        self.assertEqual(list(range(0, 10)), list(seq_idx.values()))
+        self.assertEqual(list(range(0, 11)), list(seq_idx.values()))
 
     def test_get_sequence(self):
         st = SequenceTree.from_gtf_gff(self.gtf)
         st.read_sequence(self.fasta)
         seq = st.sequence
-        self.assertIsInstance(seq, str)
+        self.assertIsInstance(seq, Seq)
         self.assertIn("A" or "C" or "G" or "T", seq)
+    
+    def test_get_coding_seq(self):
+        st = SequenceTree.from_gtf_gff(self.gtf)
+        st.read_sequence(self.fasta)
+        coding = st.get_coding_sequence()
+        self.assertTrue(coding.startswith("ATG"))
+        self.assertEqual(len(coding) % 3, 0)
+
+    def test_translate(self):
+        st = SequenceTree.from_gtf_gff(self.gtf)
+        st.read_sequence(self.fasta)
+        aa = st.translate()
+        self.assertTrue(aa.startswith("M"))
+        self.assertNotIn("*", aa)

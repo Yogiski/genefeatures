@@ -1,3 +1,4 @@
+from Bio.Seq import Seq
 from intervaltree import IntervalTree, Interval
 from .fasta_tools import extract_sequence
 from typing import Type, TypeVar
@@ -82,9 +83,6 @@ class SequenceTree:
 
         self.intervaltree.add(interval)
 
-    def sort_tree(self):
-        self.intervaltree = IntervalTree(sorted(self.intervaltree))
-
     def read_sequence(self, fasta: str):
 
         self._check_seqnames()
@@ -96,13 +94,13 @@ class SequenceTree:
             start,
             end
         )
-        self.sequence = seq
+        self.sequence = Seq(seq)
         seq_idx = self._make_seq_index(start, end)
         self._seq_idx = seq_idx
 
     @staticmethod
     def _make_seq_index(start: int, end: int) -> dict:
-        seq_idx = dict(zip(range(start, end), range(0, end - start)))
+        seq_idx = dict(zip(range(start, end+1), range(0, (end + 1) - start)))
         return seq_idx
 
     def _check_seqnames(self):
@@ -118,8 +116,34 @@ class SequenceTree:
                     """
                 )
 
+    def get_coding_sequence(self):
+
+        if not hasattr(self, "coding_sequence"):
+            coding_seq = Seq("")
+            for i in sorted(self.intervaltree):
+                if i.data["feature"] == "CDS":
+                    coding_seq += self._get_sub_sequence(
+                        self._seq_idx,
+                        self.sequence,
+                        i.begin,
+                        i.end + 1
+                    )
+            self.coding_seq = coding_seq
+        else:
+            coding_seq = self.coding_seq
+        return coding_seq
+
     def translate(self):
-        pass
+        coding_seq = self.get_coding_sequence()
+        aa_seq = coding_seq.translate()
+        self.aa_seq = aa_seq
+        return aa_seq
+
+    @staticmethod
+    def _get_sub_sequence(seq_idx, sequence, start, end):
+        seq_start = seq_idx[start]
+        seq_end = seq_idx[end]
+        return sequence[seq_start:seq_end]
 
     def mutate(self):
         pass

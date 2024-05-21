@@ -131,7 +131,7 @@ class SequenceTree:
 
     def _check_strand(self):
         # if none assume forward transcription
-        if self.strand in (1, "1", "+", None, 0):
+        if self.strand in (1, "1", "+", ".", None, 0):
             self.strand = "+"
         elif self.strand in (-1, "-1", "-"):
             self.strand = "-"

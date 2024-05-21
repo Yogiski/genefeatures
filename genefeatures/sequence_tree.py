@@ -15,7 +15,7 @@ class SequenceTree:
         seqname=None,
         strand=None,
         interval: Interval | IntervalTree = None,
-        sequence=None
+        sequence: str | Seq = None
     ):
         if isinstance(interval, IntervalTree):
             self.intervaltree = interval
@@ -28,7 +28,7 @@ class SequenceTree:
                 f"got {interval} of type {type(interval)}"
             )
 
-        self.sequence = sequence
+        self._sequence = sequence
         self.seq_id = seq_id
         self.strand = strand
         self.seqname = seqname
@@ -92,16 +92,54 @@ class SequenceTree:
             fasta,
             self.seqname,
             start,
-            end
+            end + 1
         )
-        self.sequence = Seq(seq)
-        seq_idx = self._make_seq_index(start, end)
-        self._seq_idx = seq_idx
+        self.set_sequence(seq)
+        self.set_seq_index(start=start, end=end)
+
+    def get_sequence(self):
+        return self._sequence
+
+    def set_sequence(self, sequence):
+        if isinstance(sequence, str):
+            sequence = Seq(sequence)
+        self._sequence = sequence
 
     @staticmethod
     def _make_seq_index(start: int, end: int) -> dict:
-        seq_idx = dict(zip(range(start, end+1), range(0, (end + 1) - start)))
-        return seq_idx
+        seq_index = dict(zip(range(start, end+1), range(0, (end + 1) - start)))
+        return seq_index
+
+    def get_seq_index(self):
+        return self._seq_index
+
+    def set_seq_index(
+        self,
+        seq_index: dict = None,
+        start: int = None,
+        end: int = None
+    ):
+        if isinstance(seq_index, dict):
+            self._seq_index = seq_index
+        elif isinstance(start, int) and isinstance(end, int):
+            self._seq_index = self._make_seq_index(start, end)
+        else:
+            raise TypeError(
+                "Must provide seq_index dict or "
+                "start and end ints to set seq_index attribute"
+            )
+
+    def _check_strand(self):
+        # if none assume forward transcription
+        if self.strand in (1, "1", "+", None, 0):
+            self.strand = "+"
+        elif self.strand in (-1, "-1", "-"):
+            self.strand = "-"
+        else:
+            raise ValueError(
+                "Strand must be + or 1 for positive or - or -1 for negative"
+                f"got {self.strand}"
+            )
 
     def _check_seqnames(self):
 
@@ -120,17 +158,25 @@ class SequenceTree:
 
         if not hasattr(self, "coding_sequence"):
             coding_seq = Seq("")
+
+            self._check_strand()
             for i in sorted(self.intervaltree):
                 if i.data["feature"] == "CDS":
                     coding_seq += self._get_sub_sequence(
-                        self._seq_idx,
-                        self.sequence,
+                        self.get_seq_index(),
+                        self.get_sequence(),
                         i.begin,
-                        i.end + 1
+                        i.end,
+                        self.strand
                     )
+
             self.coding_seq = coding_seq
         else:
             coding_seq = self.coding_seq
+
+        if self.strand == "-":
+            coding_seq = coding_seq.reverse_complement()
+
         return coding_seq
 
     def translate(self):
@@ -140,7 +186,12 @@ class SequenceTree:
         return aa_seq
 
     @staticmethod
-    def _get_sub_sequence(seq_idx, sequence, start, end):
+    def _get_sub_sequence(seq_idx, sequence, start, end, strand):
+        if strand == "-":
+            start += 1
+            end += 2
+        else:
+            end += 1
         seq_start = seq_idx[start]
         seq_end = seq_idx[end]
         return sequence[seq_start:seq_end]

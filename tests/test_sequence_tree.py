@@ -1,7 +1,9 @@
 import unittest
 from Bio.Seq import Seq
+import pickle
 from genefeatures.sequence_tree import SequenceTree
 from genefeatures import gtf_tools as gt
+from genefeatures import fasta_tools as ft
 
 
 class TestSequenceTree(unittest.TestCase):
@@ -14,6 +16,27 @@ class TestSequenceTree(unittest.TestCase):
             }
         )
         self.fasta = "tests/data/trunc_hs.grch38.dna.chr1.fa"
+        # setup reverse strand sequence tree
+        with open("tests/data/kras_gtfgff.pkl", "rb") as f:
+            kras_gtf = pickle.load(f)
+        kras = kras_gtf.query(
+            {"attributes": {"transcript_id": "ENST00000311936"}}
+        )
+        rev = SequenceTree.from_gtf_gff(kras)
+        start = rev.intervaltree.begin()
+        end = rev.intervaltree.end()
+
+        seq_start = start - 25195146
+        seq_end = end - 25195146
+        seq = ft.extract_sequence(
+            "tests/data/kras_plus_10kb.fa",
+            12,
+            seq_start,
+            seq_end
+        )
+        rev.set_sequence(seq)
+        rev.set_seq_index(start=start, end=end)
+        self.rev = rev
 
     def test_from_gtf(self):
         recs = self.gtf.export_records()
@@ -57,7 +80,7 @@ class TestSequenceTree(unittest.TestCase):
     def test_get_sequence(self):
         st = SequenceTree.from_gtf_gff(self.gtf)
         st.read_sequence(self.fasta)
-        seq = st.sequence
+        seq = st.get_sequence()
         self.assertIsInstance(seq, Seq)
         self.assertIn("A" or "C" or "G" or "T", seq)
 
@@ -68,9 +91,16 @@ class TestSequenceTree(unittest.TestCase):
         self.assertTrue(coding.startswith("ATG"))
         self.assertEqual(len(coding) % 3, 0)
 
-    def test_translate(self):
+    def test_forward_translate(self):
         st = SequenceTree.from_gtf_gff(self.gtf)
         st.read_sequence(self.fasta)
         aa = st.translate()
         self.assertTrue(aa.startswith("M"))
         self.assertNotIn("*", aa)
+
+    def test_reverse_translate(self):
+        coding = self.rev.get_coding_sequence()
+        self.assertTrue(coding.startswith("ATG"))
+        self.assertEqual(len(coding) % 3, 0)
+        aa_seq = self.rev.translate()
+        self.assertTrue(aa_seq.startswith("M"))

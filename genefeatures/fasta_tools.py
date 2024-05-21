@@ -3,7 +3,10 @@ import subprocess
 
 def extract_sequence(fasta_file, chromosome, start, end):
 
-    command = f"samtools faidx {fasta_file} {chromosome}:{start}-{end}"
+    command = (
+        "samtools faidx --fai-idx "
+        f"{fasta_file}.fai {fasta_file} {chromosome}:{start}-{end}"
+    )
     result = subprocess.run(
         command,
         shell=True,

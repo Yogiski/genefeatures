@@ -239,6 +239,12 @@ class GtfGff:
         for e in empty:
             self._remove_record(e)
 
+    def __get_state__(self):
+        return self.__dict__
+
+    def __set_state(self, state):
+        return self.__dict__.update(state)
+
 
 def parse_gtf(filename, gtf=None):
 

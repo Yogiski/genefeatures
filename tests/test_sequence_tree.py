@@ -34,17 +34,14 @@ class TestSequenceTree(unittest.TestCase):
             seq_start,
             seq_end
         )
-        rev.set_sequence(seq)
+        rev.set_full_seq(seq)
         rev.set_seq_index(start=start, end=end)
         self.rev = rev
 
     def test_from_gtf(self):
         recs = self.gtf.export_records()
-        print(recs[0])
         st = SequenceTree.from_gtf_gff(recs)
         self.assertIsInstance(st, SequenceTree)
-
-        print(self.gtf[0])
         st = SequenceTree.from_gtf_gff(self.gtf)
         self.assertIsInstance(st, SequenceTree)
 
@@ -72,35 +69,85 @@ class TestSequenceTree(unittest.TestCase):
             recs[0]["seqname"] = "6"
             SequenceTree.from_gtf_gff(recs)
 
-    def test_make_seq_index(self):
+    def test_init_seq_index(self):
         st = SequenceTree()
-        seq_idx = st._make_seq_index(500, 510)
+        seq_idx = st._init_seq_index(500, 510)
         self.assertEqual(list(range(0, 11)), list(seq_idx.values()))
 
     def test_get_sequence(self):
         st = SequenceTree.from_gtf_gff(self.gtf)
-        st.read_sequence(self.fasta)
-        seq = st.get_sequence()
+        seq = st.read_full_seq(self.fasta)
         self.assertIsInstance(seq, Seq)
         self.assertIn("A" or "C" or "G" or "T", seq)
 
     def test_get_coding_seq(self):
         st = SequenceTree.from_gtf_gff(self.gtf)
-        st.read_sequence(self.fasta)
-        coding = st.get_coding_sequence()
+        st.fasta = self.fasta
+        coding = st.get_coding_seq()
         self.assertTrue(coding.startswith("ATG"))
         self.assertEqual(len(coding) % 3, 0)
 
     def test_forward_translate(self):
         st = SequenceTree.from_gtf_gff(self.gtf)
-        st.read_sequence(self.fasta)
-        aa = st.translate()
+        st.fasta = self.fasta
+        aa = st.get_aa_seq()
         self.assertTrue(aa.startswith("M"))
         self.assertNotIn("*", aa)
 
     def test_reverse_translate(self):
-        coding = self.rev.get_coding_sequence()
+        coding = self.rev.get_coding_seq()
         self.assertTrue(coding.startswith("ATG"))
         self.assertEqual(len(coding) % 3, 0)
-        aa_seq = self.rev.translate()
+        aa_seq = self.rev.get_aa_seq()
         self.assertTrue(aa_seq.startswith("M"))
+
+    def test_codon_index(self):
+        coding = self.rev.get_coding_seq()
+        aa_seq = self.rev.get_aa_seq()
+        codon_index = self.rev._init_codon_index(aa_seq, coding)
+        self.assertEqual(codon_index[aa_seq[0]], "ATG")
+        nt_codons = [str(i) for i in codon_index.values()]
+        self.assertEqual(len("".join(nt_codons)) % 3, 0)
+
+    def test_match_dna_change_pattern(self):
+        # substitution
+        change_type, groups = self.rev._match_dna_change_pattern("34G>T")
+        self.assertEqual(change_type, "subs")
+        # single NT deletion
+        change_type, groups = self.rev._match_dna_change_pattern("34del")
+        self.assertEqual(change_type, "point_del")
+        self.assertEqual(groups[1], "")
+        change_type, groups = self.rev._match_dna_change_pattern("34delG")
+        self.assertEqual(change_type, "point_del")
+        self.assertEqual(groups[1], "G")
+        # multiple NT deletion
+        change_type, groups = self.rev._match_dna_change_pattern("34_36del")
+        self.assertEqual(change_type, "range_del")
+        self.assertEqual(groups[2], "")
+        change_type, groups = self.rev._match_dna_change_pattern("34_36delGGT")
+        self.assertEqual(change_type, "range_del")
+        self.assertEqual(groups[2], "GGT")
+
+    def test_dna_change_snv(self):
+        self.rev.get_coding_seq()
+        mt_coding, mt_full = self.rev._dna_snv(("34", "G", "T"))
+        self.assertEqual(mt_coding[33:36], "TGT")
+        self.assertEqual(mt_full[40104:40107], "ACA")
+        with self.assertRaises(ValueError):
+            self.rev._dna_snv(("33", "G", "T"))
+
+    def test_dna_point_deletion(self):
+        self.rev.get_coding_seq()
+        mt_coding, mt_full = self.rev._dna_point_deletion(("34", ""))
+        self.assertEqual(mt_coding[33:36], "GTG")
+        self.assertEqual(mt_full[40103:40106], "CAC")
+        with self.assertRaises(ValueError):
+            self.rev._dna_point_deletion(("34", "C"))
+
+    def test_dna_range_deletion(self):
+        self.rev.get_coding_seq()
+        mt_coding, mt_full = self.rev._dna_range_deletion(("34", "36", ""))
+        self.assertEqual(mt_coding[33:36], "GGC")
+        self.assertEqual(mt_full[40101:40104], "GCC")
+        with self.assertRaises(ValueError):
+            self.rev._dna_range_deletion(("34", "36", "AAA"))

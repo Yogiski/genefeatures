@@ -1,4 +1,7 @@
-from Bio.Seq import Seq
+import os
+import re
+from collections import OrderedDict
+from Bio.Seq import Seq, reverse_complement
 from intervaltree import IntervalTree, Interval
 from .fasta_tools import extract_sequence
 from typing import Type, TypeVar
@@ -15,7 +18,7 @@ class SequenceTree:
         seqname=None,
         strand=None,
         interval: Interval | IntervalTree = None,
-        sequence: str | Seq = None
+        fasta=None
     ):
         if isinstance(interval, IntervalTree):
             self.intervaltree = interval
@@ -27,12 +30,19 @@ class SequenceTree:
                 "Interval, IntervalTree, or None;"
                 f"got {interval} of type {type(interval)}"
             )
-
-        self._sequence = sequence
+        # init public attrs
         self.seq_id = seq_id
         self.strand = strand
         self.seqname = seqname
+        self.fasta = fasta
+        # init private attrs
+        self._sequence = None
+        self._seq_index = None
+        self._coding_seq = None
+        self._codon_index = None
+        self._aa_seq = None
 
+    # init methods
     @classmethod
     def from_gtf_gff(cls, records: list[dict] | Type[gtf], seq_id: str = None):
 
@@ -45,7 +55,6 @@ class SequenceTree:
                 "records must be type list or GtfGff;"
                 f"got type {type(records)}"
             )
-
         try:
             intervaltree = IntervalTree()
             seqname = records[0]["seqname"]
@@ -83,52 +92,7 @@ class SequenceTree:
 
         self.intervaltree.add(interval)
 
-    def read_sequence(self, fasta: str):
-
-        self._check_seqnames()
-        start = self.intervaltree.begin()
-        end = self.intervaltree.end()
-        seq = extract_sequence(
-            fasta,
-            self.seqname,
-            start,
-            end + 1
-        )
-        self.set_sequence(seq)
-        self.set_seq_index(start=start, end=end)
-
-    def get_sequence(self):
-        return self._sequence
-
-    def set_sequence(self, sequence):
-        if isinstance(sequence, str):
-            sequence = Seq(sequence)
-        self._sequence = sequence
-
-    @staticmethod
-    def _make_seq_index(start: int, end: int) -> dict:
-        seq_index = dict(zip(range(start, end+1), range(0, (end + 1) - start)))
-        return seq_index
-
-    def get_seq_index(self):
-        return self._seq_index
-
-    def set_seq_index(
-        self,
-        seq_index: dict = None,
-        start: int = None,
-        end: int = None
-    ):
-        if isinstance(seq_index, dict):
-            self._seq_index = seq_index
-        elif isinstance(start, int) and isinstance(end, int):
-            self._seq_index = self._make_seq_index(start, end)
-        else:
-            raise TypeError(
-                "Must provide seq_index dict or "
-                "start and end ints to set seq_index attribute"
-            )
-
+    # saftey checking functions
     def _check_strand(self):
         # if none assume forward transcription
         if self.strand in (1, "1", "+", ".", None, 0):
@@ -148,45 +112,76 @@ class SequenceTree:
                 self.seqname = i.data["seqname"]
             if i.data["seqname"] != self.seqname:
                 raise ValueError(
-                    f"""
-                    seqnames inconsistent
-                    found seqnames {self.seqname} and {i.data["seqname"]}
-                    """
+                    "seqnames inconsistent found seqnames"
+                    f"{self.seqname} and {i.data["seqname"]}"
                 )
 
-    def get_coding_sequence(self):
+    def _check_fasta(self, fasta=None):
 
-        if not hasattr(self, "coding_sequence"):
-            coding_seq = Seq("")
+        if fasta is None:
+            fasta = self.fasta
+        if fasta is None:
+            raise ValueError(
+                f"object {self} has not attribute fasta; "
+                "fasta must be set to read sequence"
+            )
+        fa_exists = os.path.isfile(fasta)
+        fai_exists = os.path.isfile(f"{fasta}.fai")
+        if not (fa_exists or fai_exists):
+            raise FileNotFoundError(
+                "fasta file and fasta index file must be present to "
+                f"read sequence\nno such file: {fasta}"
+            )
 
-            self._check_strand()
-            for i in sorted(self.intervaltree):
-                if i.data["feature"] == "CDS":
-                    coding_seq += self._get_sub_sequence(
-                        self.get_seq_index(),
-                        self.get_sequence(),
-                        i.begin,
-                        i.end,
-                        self.strand
-                    )
-
-            self.coding_seq = coding_seq
+    # full NT sequence methods
+    def read_full_seq(self, fasta: str = None, inplace=False):
+        self._check_seqnames()
+        if fasta is None:
+            fasta = self.fasta
+        self._check_fasta(fasta)
+        start = self.intervaltree.begin()
+        end = self.intervaltree.end()
+        seq = extract_sequence(
+            fasta,
+            self.seqname,
+            start,
+            end + 1
+        )
+        seq = Seq(seq)
+        if inplace:
+            self.set_full_seq(seq)
         else:
-            coding_seq = self.coding_seq
+            return seq
 
-        if self.strand == "-":
-            coding_seq = coding_seq.reverse_complement()
+    def set_full_seq(self, sequence=None):
+        if sequence is None:
+            sequence = self.read_full_seq()
+        self._sequence = sequence
 
-        return coding_seq
+    def get_full_seq(self):
+        if self._sequence is None:
+            self.set_full_seq()
+        return self._sequence
 
-    def translate(self):
-        coding_seq = self.get_coding_sequence()
-        aa_seq = coding_seq.translate()
-        self.aa_seq = aa_seq
-        return aa_seq
+    # seq index methods, for index NT seq wrt genomic coords
+    @staticmethod
+    def _init_seq_index(start: int, end: int) -> dict:
+        seq_index = dict(zip(range(start, end+1), range(0, (end + 1) - start)))
+        return seq_index
+
+    def set_seq_index(self, start: int = None, end: int = None):
+        if start is None or end is None:
+            start = self.intervaltree.begin()
+            end = self.intervaltree.end() + 1
+        self._seq_index = self._init_seq_index(start, end)
+
+    def get_seq_index(self):
+        if self._seq_index is None:
+            self.set_seq_index()
+        return self._seq_index
 
     @staticmethod
-    def _get_sub_sequence(seq_idx, sequence, start, end, strand):
+    def _get_sub_seq_idx(seq_idx, start, end, strand):
         if strand == "-":
             start += 1
             end += 2
@@ -194,7 +189,187 @@ class SequenceTree:
             end += 1
         seq_start = seq_idx[start]
         seq_end = seq_idx[end]
-        return sequence[seq_start:seq_end]
+        return seq_start, seq_end
 
-    def mutate(self):
+    # coding sequence methods
+    def _init_coding_seq(self):
+
+        coding_seq = Seq("")
+        seq_index = self.get_seq_index()
+        full_seq = self.get_full_seq()
+        coding_index = []
+        for i in sorted(self.intervaltree):
+            if i.data["feature"] == "CDS":
+                seq_start, seq_end = self._get_sub_seq_idx(
+                    seq_index,
+                    i.begin,
+                    i.end,
+                    self.strand
+                )
+                coding_seq += full_seq[seq_start:seq_end]
+                coding_index += list(range(seq_start, seq_end))
+
+        if self.strand == "-":
+            coding_seq = coding_seq.reverse_complement()
+            coding_index = list(reversed(coding_index))
+        # coding index translates coding position to full seq position
+        self._coding_index = dict(
+            zip(range(0, len(coding_index)), coding_index)
+        )
+        return coding_seq
+
+    def set_coding_seq(self, coding_seq=None):
+        self._check_strand()
+        if coding_seq is None:
+            coding_seq = self._init_coding_seq()
+        self._coding_seq = coding_seq
+
+    def get_coding_seq(self):
+        if self._coding_seq is None:
+            self.set_coding_seq()
+        return self._coding_seq
+
+    # amino acid sequence methods
+    @staticmethod
+    def translate_coding_seq(coding_seq):
+        return coding_seq.translate()
+
+    def set_aa_seq(self, aa_seq=None):
+        if aa_seq is None:
+            aa_seq = self.get_coding_seq().translate()
+        self._aa_seq = aa_seq
+
+    def get_aa_seq(self):
+        if self._aa_seq is None:
+            self.set_aa_seq()
+        return self._aa_seq
+
+    @staticmethod
+    def _init_codon_index(aa_seq, nt_seq):
+        codons = [nt_seq[start:start+3] for start in range(0, len(nt_seq), 3)]
+        codon_index = OrderedDict(zip(aa_seq, codons))
+        return codon_index
+
+    def set_codon_index(self):
+        nt_seq = self.get_coding_seq()
+        aa_seq = self.translate_coding_seq()
+        codon_index = self._init_codon_index(aa_seq, nt_seq)
+        self._codon_index = codon_index
+
+    def get_codon_index(self):
+        if self._codon_index is None:
+            self.set_codon_index()
+        return self._codon_index
+
+    # mutation methods
+    def _match_protein_change_pattern(self, change: str) -> tuple:
         pass
+
+    def _protein_change(self, change):
+        pass
+
+    def _match_dna_change_pattern(self, change: str) -> tuple:
+
+        patterns = {
+            "subs": re.compile(r"(\d+)([ACGT])>([ACGT])"),
+            "point_del": re.compile(r"(\d+)del([ACGT]*)"),
+            "range_del": re.compile(r"(\d+)_(\d+)del([ACGT]*)"),
+            "ins": re.compile(r"(\d+)_(\d+)ins([ACGT]+)"),
+            "dup": re.compile(r"(\d+)_(\d+)dup([ACGT]+)"),
+            "inv": re.compile(r"(\d+)_(\d+)inv(\d*)"),
+            "indel": re.compile(r"(\d+)_(\d+)delins([ACGT]+)"),
+        }
+        for key, pattern in patterns.items():
+            match = pattern.match(change)
+            if match:
+                return key, match.groups()
+
+        raise ValueError(f"Unrecognized change format: {change}")
+
+    def _dna_change(self, change):
+
+        change_type, groups = self._match_dna_change_pattern(change)
+        if change_type == "subs":
+            mutated_seq = self._dna_snv(groups)
+        elif change_type == "point_del":
+            mutated_seq = self._dna_point_deletion(groups)
+        elif change_type == "range_del":
+            mutated_seq = self._dna_range_deletion(groups)
+        elif change_type == "ins":
+            pass  # self._dna_insertion(groups)
+        elif change_type == "dup":
+            pass  # self._dna_duplication(groups)
+        elif change_type == "inv":
+            pass  # self._dna_inversion(groups)
+        elif change_type == "indel":
+            pass  # self._dna_indel(groups)
+
+        self.set_coding_seq(mutated_seq[0])
+        self.set_full_seq(mutated_seq[1])
+
+    def _mutate_sequence(
+        self,
+        sequence: Seq,
+        start: int,
+        end: int,
+        ref: str = "",
+        alt: str = ""
+    ) -> Seq:
+        print(sequence[start:end])
+        print(ref)
+        if sequence[start:end] != ref:
+            raise ValueError(
+                f"Reference base(s) {ref} do not match "
+                f"at position {start+1}-{end+1} "
+                f"found {sequence[start:end + len(ref)]}"
+            )
+        return sequence[:start] + alt + sequence[end:]
+
+    def _get_mutated_sequences(
+        self,
+        pos: int,
+        ref: str = "",
+        alt: str = ""
+    ) -> tuple:
+
+        code = self.get_coding_seq()
+        if ref == "":
+            ref = code[pos]
+        if len(ref) >= 1:
+            end = pos + len(ref)
+        else:
+            end = pos
+        mutated_code = self._mutate_sequence(code, pos, end, ref, alt)
+
+        full = self.get_full_seq()
+        if self.strand == "-":
+            ref = reverse_complement(ref)
+            alt = reverse_complement(alt)
+            full_pos = self._coding_index[end] + 1
+            full_end = self._coding_index[pos] + 1
+            print(pos, end, full_pos, full_end)
+        else:
+            full_pos = self._coding_index[pos]
+            full_end = self._coding_index[end]
+
+        mutated_full = self._mutate_sequence(
+            full, full_pos, full_end, ref, alt
+        )
+        return mutated_code, mutated_full
+
+    def _dna_snv(self, groups: tuple) -> tuple:
+        pos, ref, alt = groups
+        pos = int(pos) - 1
+        return self._get_mutated_sequences(pos, ref, alt)
+
+    def _dna_point_deletion(self, groups: tuple) -> tuple:
+        pos, ref = groups
+        pos = int(pos) - 1
+        return self._get_mutated_sequences(pos, ref)
+
+    def _dna_range_deletion(self, groups: tuple) -> tuple:
+        start, end, ref = groups
+        start, end = int(start) - 1, int(end)
+        if ref == "":
+            ref = self.get_coding_seq()[start:end]
+        return self._get_mutated_sequences(start, ref)

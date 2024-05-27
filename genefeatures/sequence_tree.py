@@ -267,12 +267,15 @@ class SequenceTree:
 
         patterns = {
             "subs": re.compile(r"(\d+)([ACGT])>([ACGT])"),
-            "point_del": re.compile(r"(\d+)del([ACGT]*)"),
-            "range_del": re.compile(r"(\d+)_(\d+)del([ACGT]*)"),
+            "indel": re.compile(
+                r"(\d+)_(\d+)delins([ACGT]+)|"
+                r"(\d+)_(\d+)del([ACGT]+)ins([ACGT]+)"
+            ),
+            "point_del": re.compile(r"(\d+)del(?!ins)([ACGT]*)"),
+            "range_del": re.compile(r"(\d+)_(\d+)del(?!ins)([ACGT]*)"),
             "ins": re.compile(r"(\d+)_(\d+)ins([ACGT]+)"),
-            "dup": re.compile(r"(\d+)_(\d+)dup([ACGT]+)"),
-            "inv": re.compile(r"(\d+)_(\d+)inv(\d*)"),
-            "indel": re.compile(r"(\d+)_(\d+)delins([ACGT]+)"),
+            "dup": re.compile(r"(\d+)_(\d+)dup([ACGT]*)"),
+            "inv": re.compile(r"(\d+)_(\d+)inv(\d*)")
         }
         for key, pattern in patterns.items():
             match = pattern.match(change)
@@ -291,13 +294,13 @@ class SequenceTree:
         elif change_type == "range_del":
             mutated_seq = self._dna_range_deletion(groups)
         elif change_type == "ins":
-            pass  # self._dna_insertion(groups)
+            mutated_seq = self._dna_insertion(groups)
         elif change_type == "dup":
-            pass  # self._dna_duplication(groups)
+            mutated_seq = self._dna_duplication(groups)
         elif change_type == "inv":
-            pass  # self._dna_inversion(groups)
+            mutated_seq = self._dna_inversion(groups)
         elif change_type == "indel":
-            pass  # self._dna_indel(groups)
+            mutated_seq = self._dna_indel(groups)
 
         self.set_coding_seq(mutated_seq[0])
         self.set_full_seq(mutated_seq[1])
@@ -307,8 +310,8 @@ class SequenceTree:
         sequence: Seq,
         start: int,
         end: int,
-        ref: str = "",
-        alt: str = ""
+        ref: str,
+        alt: str
     ) -> Seq:
         if sequence[start:end] != ref:
             raise ValueError(
@@ -377,4 +380,29 @@ class SequenceTree:
         start, end = int(start) - 1, int(end)
         ref = self.get_coding_seq()[start:end]
         alt = ref + ref
+        return self._get_mutated_sequences(start, end, ref=ref, alt=alt)
+
+    def _dna_inversion(self, groups: tuple) -> tuple:
+        start, end, length = groups
+        start, end = int(start) - 1, int(end)
+        ref = self.get_coding_seq()[start:end]
+        alt = ref[::-1]
+        return self._get_mutated_sequences(start, end, ref=ref, alt=alt)
+
+    def _dna_indel(self, groups: tuple) -> tuple:
+
+        if groups[3] is None:
+            start, end, alt = groups[:3]
+            start, end = int(start) - 1, int(end)
+            ref = self.get_coding_seq()[start:end]
+        elif groups[0] is None:
+            start, end, ref, alt = groups[3:]
+            start, end = int(start) - 1, int(end)
+        else:
+            raise ValueError(
+                "indel groups formatted incorrectly. "
+                "must be tuple with len of 6 "
+                "either first 3 entries or last 4 entries must be None "
+                f"got {groups}"
+            )
         return self._get_mutated_sequences(start, end, ref=ref, alt=alt)

@@ -127,6 +127,34 @@ class TestSequenceTree(unittest.TestCase):
         change_type, groups = self.rev._match_dna_change_pattern("34_36delGGT")
         self.assertEqual(change_type, "range_del")
         self.assertEqual(groups[2], "GGT")
+        # insertion
+        change_type, groups = self.rev._match_dna_change_pattern("33_34insAAA")
+        self.assertEqual(change_type, "ins")
+        # duplication
+        change_type, groups = self.rev._match_dna_change_pattern("34_36dupGGT")
+        self.assertEqual(change_type, "dup")
+        change_type, groups = self.rev._match_dna_change_pattern("34_36dup")
+        self.assertEqual(change_type, "dup")
+        change_type, groups = self.rev._match_dna_change_pattern("34_36inv")
+        self.assertEqual(change_type, "inv")
+        self.assertEqual(len(groups), 3)
+        change_type, groups = self.rev._match_dna_change_pattern("34_36inv3")
+        self.assertEqual(change_type, "inv")
+        change_type, groups = self.rev._match_dna_change_pattern(
+            "34_36delinsTAA"
+        )
+        self.assertEqual(change_type, "indel")
+        self.assertIsNone(groups[3])
+        self.assertIsNone(groups[4])
+        self.assertIsNone(groups[5])
+        self.assertIsNone(groups[6])
+        change_type, groups = self.rev._match_dna_change_pattern(
+            "34_36delGGTinsTAA"
+        )
+        self.assertEqual(change_type, "indel")
+        self.assertIsNone(groups[0])
+        self.assertIsNone(groups[1])
+        self.assertIsNone(groups[2])
 
     def test_dna_change_snv(self):
         self.rev.get_coding_seq()
@@ -167,3 +195,30 @@ class TestSequenceTree(unittest.TestCase):
         self.assertEqual(mt_coding[36:39], "GGT")
         self.assertEqual(mt_full[40104:40107], "ACC")
         self.assertEqual(mt_full[40107:40110], "ACC")
+
+    def test_dna_inv(self):
+        self.rev.get_coding_seq()
+        mt_coding, mt_full = self.rev._dna_inversion(("34", "36", "3"))
+        self.assertEqual(mt_coding[33:36], "TGG")
+        self.assertEqual(mt_coding[36:39], "GGC")
+        self.assertEqual(mt_full[40104:40107], "CCA")
+        self.assertEqual(mt_full[40101:40104], "GCC")
+
+    def test_dna_indel(self):
+        self.rev.get_coding_seq()
+        mt_coding, mt_full = self.rev._dna_indel(
+            ("34", "36", "ACGT", None, None, None, None)
+        )
+        self.assertEqual(mt_coding[30:33], "GCT")
+        self.assertEqual(mt_coding[33:37], "ACGT")
+        self.assertEqual(mt_coding[37:40], "GGC")
+        self.assertEqual(mt_full[40104:40108], "ACGT")
+        self.assertEqual(mt_full[40101:40104], "GCC")
+        mt_coding, mt_full = self.rev._dna_indel(
+            (None, None, None, "34", "36", "GGT", "ACGT")
+        )
+        self.assertEqual(mt_coding[30:33], "GCT")
+        self.assertEqual(mt_coding[33:37], "ACGT")
+        self.assertEqual(mt_coding[37:40], "GGC")
+        self.assertEqual(mt_full[40104:40108], "ACGT")
+        self.assertEqual(mt_full[40101:40104], "GCC")

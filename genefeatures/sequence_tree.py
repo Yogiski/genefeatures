@@ -262,12 +262,7 @@ class SequenceTree:
         return self._codon_index
 
     # mutation methods
-    def _match_protein_change_pattern(self, change: str) -> tuple:
-        pass
-
-    def _protein_change(self, change):
-        pass
-
+    # DNA changes
     def _match_dna_change_pattern(self, change: str) -> tuple:
 
         patterns = {
@@ -315,30 +310,23 @@ class SequenceTree:
         ref: str = "",
         alt: str = ""
     ) -> Seq:
-        print(sequence[start:end])
-        print(ref)
         if sequence[start:end] != ref:
             raise ValueError(
                 f"Reference base(s) {ref} do not match "
                 f"at position {start+1}-{end+1} "
-                f"found {sequence[start:end + len(ref)]}"
+                f"found {sequence[start:end]}"
             )
         return sequence[:start] + alt + sequence[end:]
 
     def _get_mutated_sequences(
         self,
         pos: int,
+        end: int,
         ref: str = "",
         alt: str = ""
     ) -> tuple:
 
         code = self.get_coding_seq()
-        if ref == "":
-            ref = code[pos]
-        if len(ref) >= 1:
-            end = pos + len(ref)
-        else:
-            end = pos
         mutated_code = self._mutate_sequence(code, pos, end, ref, alt)
 
         full = self.get_full_seq()
@@ -347,7 +335,6 @@ class SequenceTree:
             alt = reverse_complement(alt)
             full_pos = self._coding_index[end] + 1
             full_end = self._coding_index[pos] + 1
-            print(pos, end, full_pos, full_end)
         else:
             full_pos = self._coding_index[pos]
             full_end = self._coding_index[end]
@@ -360,16 +347,34 @@ class SequenceTree:
     def _dna_snv(self, groups: tuple) -> tuple:
         pos, ref, alt = groups
         pos = int(pos) - 1
-        return self._get_mutated_sequences(pos, ref, alt)
+        end = pos + 1
+        return self._get_mutated_sequences(pos, end, ref=ref, alt=alt)
 
     def _dna_point_deletion(self, groups: tuple) -> tuple:
         pos, ref = groups
         pos = int(pos) - 1
-        return self._get_mutated_sequences(pos, ref)
+        if ref == "":
+            ref = self.get_coding_seq()[pos]
+        end = pos + 1
+        return self._get_mutated_sequences(pos, end, ref=ref)
 
     def _dna_range_deletion(self, groups: tuple) -> tuple:
         start, end, ref = groups
         start, end = int(start) - 1, int(end)
         if ref == "":
             ref = self.get_coding_seq()[start:end]
-        return self._get_mutated_sequences(start, ref)
+        return self._get_mutated_sequences(start, end, ref=ref)
+
+    def _dna_insertion(self, groups: tuple) -> tuple:
+        start, end, alt = groups
+        start, end = int(start), int(end)
+        end = start
+        ref = self.get_coding_seq()[start:end]
+        return self._get_mutated_sequences(start, end, ref=ref, alt=alt)
+
+    def _dna_duplication(self, groups: tuple) -> tuple:
+        start, end = groups
+        start, end = int(start) - 1, int(end)
+        ref = self.get_coding_seq()[start:end]
+        alt = ref + ref
+        return self._get_mutated_sequences(start, end, ref=ref, alt=alt)

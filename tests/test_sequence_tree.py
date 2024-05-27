@@ -151,3 +151,19 @@ class TestSequenceTree(unittest.TestCase):
         self.assertEqual(mt_full[40101:40104], "GCC")
         with self.assertRaises(ValueError):
             self.rev._dna_range_deletion(("34", "36", "AAA"))
+
+    def test_dna_insertion(self):
+        self.rev.get_coding_seq()
+        mt_coding, mt_full = self.rev._dna_insertion(("33", "34", "AAA"))
+        self.assertEqual(mt_coding[33:36], "AAA")
+        self.assertEqual(mt_coding[36:39], "GGT")
+        self.assertEqual(mt_full[40107:40110], "TTT")
+        self.assertEqual(mt_full[40104:40107], "ACC")
+
+    def test_dna_duplication(self):
+        self.rev.get_coding_seq()
+        mt_coding, mt_full = self.rev._dna_duplication(("34", "36"))
+        self.assertEqual(mt_coding[33:36], "GGT")
+        self.assertEqual(mt_coding[36:39], "GGT")
+        self.assertEqual(mt_full[40104:40107], "ACC")
+        self.assertEqual(mt_full[40107:40110], "ACC")

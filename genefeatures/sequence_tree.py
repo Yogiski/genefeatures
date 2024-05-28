@@ -1,10 +1,10 @@
 import os
-import re
 from collections import OrderedDict
 from Bio.Seq import Seq, reverse_complement
 from intervaltree import IntervalTree, Interval
-from .fasta_tools import extract_sequence
 from typing import Type, TypeVar
+from .variation_parser import SequenceVariationParser
+from .fasta_tools import extract_sequence
 from .gtf_tools import GtfGff
 
 gtf = TypeVar("gtf", bound="GtfGff")
@@ -35,12 +35,14 @@ class SequenceTree:
         self.strand = strand
         self.seqname = seqname
         self.fasta = fasta
+        self.mutations = []
         # init private attrs
         self._sequence = None
         self._seq_index = None
         self._coding_seq = None
         self._codon_index = None
         self._aa_seq = None
+        self._svp = SequenceVariationParser()
 
     # init methods
     @classmethod
@@ -262,49 +264,6 @@ class SequenceTree:
         return self._codon_index
 
     # mutation methods
-    # DNA changes
-    def _match_dna_change_pattern(self, change: str) -> tuple:
-
-        patterns = {
-            "subs": re.compile(r"(\d+)([ACGT])>([ACGT])"),
-            "indel": re.compile(
-                r"(\d+)_(\d+)delins([ACGT]+)|"
-                r"(\d+)_(\d+)del([ACGT]+)ins([ACGT]+)"
-            ),
-            "point_del": re.compile(r"(\d+)del(?!ins)([ACGT]*)"),
-            "range_del": re.compile(r"(\d+)_(\d+)del(?!ins)([ACGT]*)"),
-            "ins": re.compile(r"(\d+)_(\d+)ins([ACGT]+)"),
-            "dup": re.compile(r"(\d+)_(\d+)dup([ACGT]*)"),
-            "inv": re.compile(r"(\d+)_(\d+)inv(\d*)")
-        }
-        for key, pattern in patterns.items():
-            match = pattern.match(change)
-            if match:
-                return key, match.groups()
-
-        raise ValueError(f"Unrecognized change format: {change}")
-
-    def _dna_change(self, change):
-
-        change_type, groups = self._match_dna_change_pattern(change)
-        if change_type == "subs":
-            mutated_seq = self._dna_snv(groups)
-        elif change_type == "point_del":
-            mutated_seq = self._dna_point_deletion(groups)
-        elif change_type == "range_del":
-            mutated_seq = self._dna_range_deletion(groups)
-        elif change_type == "ins":
-            mutated_seq = self._dna_insertion(groups)
-        elif change_type == "dup":
-            mutated_seq = self._dna_duplication(groups)
-        elif change_type == "inv":
-            mutated_seq = self._dna_inversion(groups)
-        elif change_type == "indel":
-            mutated_seq = self._dna_indel(groups)
-
-        self.set_coding_seq(mutated_seq[0])
-        self.set_full_seq(mutated_seq[1])
-
     def _mutate_sequence(
         self,
         sequence: Seq,
@@ -406,3 +365,40 @@ class SequenceTree:
                 f"got {groups}"
             )
         return self._get_mutated_sequences(start, end, ref=ref, alt=alt)
+
+    def _dna_change(self, change):
+
+        change_type, groups = self._svp.match_dna_change_pattern(change)
+        if change_type == "subs":
+            mutated_seq = self._dna_snv(groups)
+
+        elif change_type == "point_del":
+            mutated_seq = self._dna_point_deletion(groups)
+
+        elif change_type == "range_del":
+            mutated_seq = self._dna_range_deletion(groups)
+
+        elif change_type == "ins":
+            mutated_seq = self._dna_insertion(groups)
+
+        elif change_type == "dup":
+            mutated_seq = self._dna_duplication(groups)
+
+        elif change_type == "inv":
+            mutated_seq = self._dna_inversion(groups)
+
+        elif change_type == "indel":
+            mutated_seq = self._dna_indel(groups)
+
+        self.set_coding_seq(mutated_seq[0])
+        self.set_full_seq(mutated_seq[1])
+
+    def mutate(self, variation):
+
+        var_type, variation = self._svp.match_variation_pattern(variation)
+        if var_type in ["genomic", "cDNA"]:
+            self._dna_change(variation)
+        else:
+            raise ValueError(
+                f"variation type {var_type} has not been implemented"
+            )

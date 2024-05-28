@@ -109,53 +109,6 @@ class TestSequenceTree(unittest.TestCase):
         nt_codons = [str(i) for i in codon_index.values()]
         self.assertEqual(len("".join(nt_codons)) % 3, 0)
 
-    def test_match_dna_change_pattern(self):
-        # substitution
-        change_type, groups = self.rev._match_dna_change_pattern("34G>T")
-        self.assertEqual(change_type, "subs")
-        # single NT deletion
-        change_type, groups = self.rev._match_dna_change_pattern("34del")
-        self.assertEqual(change_type, "point_del")
-        self.assertEqual(groups[1], "")
-        change_type, groups = self.rev._match_dna_change_pattern("34delG")
-        self.assertEqual(change_type, "point_del")
-        self.assertEqual(groups[1], "G")
-        # multiple NT deletion
-        change_type, groups = self.rev._match_dna_change_pattern("34_36del")
-        self.assertEqual(change_type, "range_del")
-        self.assertEqual(groups[2], "")
-        change_type, groups = self.rev._match_dna_change_pattern("34_36delGGT")
-        self.assertEqual(change_type, "range_del")
-        self.assertEqual(groups[2], "GGT")
-        # insertion
-        change_type, groups = self.rev._match_dna_change_pattern("33_34insAAA")
-        self.assertEqual(change_type, "ins")
-        # duplication
-        change_type, groups = self.rev._match_dna_change_pattern("34_36dupGGT")
-        self.assertEqual(change_type, "dup")
-        change_type, groups = self.rev._match_dna_change_pattern("34_36dup")
-        self.assertEqual(change_type, "dup")
-        change_type, groups = self.rev._match_dna_change_pattern("34_36inv")
-        self.assertEqual(change_type, "inv")
-        self.assertEqual(len(groups), 3)
-        change_type, groups = self.rev._match_dna_change_pattern("34_36inv3")
-        self.assertEqual(change_type, "inv")
-        change_type, groups = self.rev._match_dna_change_pattern(
-            "34_36delinsTAA"
-        )
-        self.assertEqual(change_type, "indel")
-        self.assertIsNone(groups[3])
-        self.assertIsNone(groups[4])
-        self.assertIsNone(groups[5])
-        self.assertIsNone(groups[6])
-        change_type, groups = self.rev._match_dna_change_pattern(
-            "34_36delGGTinsTAA"
-        )
-        self.assertEqual(change_type, "indel")
-        self.assertIsNone(groups[0])
-        self.assertIsNone(groups[1])
-        self.assertIsNone(groups[2])
-
     def test_dna_change_snv(self):
         self.rev.get_coding_seq()
         mt_coding, mt_full = self.rev._dna_snv(("34", "G", "T"))

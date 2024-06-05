@@ -1,7 +1,6 @@
 from intervaltree import Interval, IntervalTree
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
-from functools import lru_cache
 
 
 @dataclass

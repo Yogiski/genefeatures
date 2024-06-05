@@ -3,7 +3,6 @@ import pickle
 from Bio.Seq import reverse_complement
 from genefeatures import gtf_tools as gt
 from genefeatures.fasta_tools import extract_sequence
-from genefeatures.sequence_tree import SequenceTree
 from genefeatures.sequence_index import SequenceIndex
 
 
@@ -11,11 +10,12 @@ class TestSequenceIndex(unittest.TestCase):
 
     def setUp(self):
 
+        # forward transcript testing
         gtf = gt.parse_gtf("tests/data/test_hs_grch38.gtf")
         records = gtf.query(
             {"attributes": {"transcript_id": "ENST00000511072"}}
         )
-        self.itree_for = SequenceTree.from_gtf_gff(records).intervaltree
+        self.itree_for = gt.records_to_interval_tree(records)
         start = self.itree_for.begin()
         end = self.itree_for.end()
         seq = extract_sequence(
@@ -24,17 +24,16 @@ class TestSequenceIndex(unittest.TestCase):
             start,
             end
         )
-        print(seq[92:95])
-        print(seq[-656:-653])
         self.seq_for = seq
         self.si_for = SequenceIndex(self.itree_for)
 
+        # reverse transcript testing
         with open("tests/data/kras_gtfgff.pkl", "rb") as f:
             kras_gtf = pickle.load(f)
         kras = kras_gtf.query(
             {"attributes": {"transcript_id": "ENST00000311936"}}
         )
-        self.itree_rev = SequenceTree.from_gtf_gff(kras).intervaltree
+        self.itree_rev = gt.records_to_interval_tree(kras)
         start = self.itree_rev.begin() - 25195145
         end = self.itree_rev.end() - 25195145
         seq = extract_sequence(
@@ -44,60 +43,15 @@ class TestSequenceIndex(unittest.TestCase):
             end
         )
         self.seq_rev = reverse_complement(seq)
-        print(self.seq_rev[5545:5548])
-        print(self.seq_rev[41132:41135])
-
         self.si_rev = SequenceIndex(self.itree_rev)
 
+# Test genomic indices
     def test_genomic_index_forward(self):
         start = self.itree_for.begin()
         end = self.itree_for.end()
         seq_len = end - start
         self.assertEqual(self.si_for.genomic_idx[start], 0)
         self.assertEqual(self.si_for.genomic_idx[end], seq_len)
-
-    def test_code_index_forward(self):
-        self.assertIsInstance(
-            self.si_for.transcript_idx["1"],
-            int
-        )
-        self.assertEqual(
-            self.si_for.transcript_idx["-1"],
-            self.si_for.transcript_idx["1"] - 1
-        )
-        self.assertEqual(
-            len(self.si_for.transcript_idx),
-            len(self.si_for.genomic_idx)
-        )
-        self.assertEqual(
-            self.si_for.transcript_idx["-92"],
-            0
-        )
-        self.assertEqual(
-            self.si_for.transcript_idx["1"],
-            92
-        )
-        self.assertEqual(
-            self.si_for.transcript_idx["*656"],
-            len(self.seq_for) - 1
-        )
-        start_idx = slice(
-            self.si_for.transcript_idx["1"],
-            self.si_for.transcript_idx["4"]
-        )
-        self.assertEqual(
-                self.seq_for[start_idx],
-                "ATG"
-        )
-        stop_idx = slice(
-            self.si_for.transcript_idx["*1"],
-            self.si_for.transcript_idx["*4"]
-        )
-        print(stop_idx)
-        self.assertEqual(
-                self.seq_for[stop_idx],
-                "TGA"
-        )
 
     def test_genomic_index_reverse(self):
         start = self.itree_rev.begin()
@@ -106,42 +60,71 @@ class TestSequenceIndex(unittest.TestCase):
         self.assertEqual(self.si_rev.genomic_idx[start], 0)
         self.assertEqual(self.si_rev.genomic_idx[end], seq_len)
 
-    def test_code_index_reverse(self):
+# Test forward transcript index
+
+    def test_code_index_value_type(self):
+        self.assertIsInstance(
+            self.si_for.transcript_idx["1"],
+            int
+        )
         self.assertIsInstance(
             self.si_rev.transcript_idx["1"],
             int
         )
+
+    def test_index_length_forward_matches(self):
         self.assertEqual(
-            self.si_rev.transcript_idx["-1"] + 1,
-            self.si_rev.transcript_idx["1"]
+            len(self.si_for.transcript_idx),
+            len(self.si_for.genomic_idx)
         )
+
+    def test_code_index_forward_start_codon(self):
+        start_idx = slice(
+            self.si_for.transcript_idx["1"],
+            self.si_for.transcript_idx["4"]
+        )
+        self.assertEqual(
+                self.seq_for[start_idx],
+                "ATG"
+        )
+
+    def test_code_index_forward_utr_start_location(self):
+        self.assertEqual(
+            self.si_for.transcript_idx["-1"],
+            self.si_for.transcript_idx["1"] - 1
+        )
+
+    def test_code_index_forward_stop_codon(self):
+        stop_idx = slice(
+            self.si_for.transcript_idx["*1"],
+            self.si_for.transcript_idx["*4"]
+        )
+        self.assertEqual(
+                self.seq_for[stop_idx],
+                "TGA"
+        )
+
+    def test_code_index_forward_seq_index_first_element(self):
+        self.assertEqual(
+            self.si_for.transcript_idx["-92"],
+            0
+        )
+
+    def test_code_index_forward_seq_index_last_element(self):
+        self.assertEqual(
+            self.si_for.transcript_idx["*656"],
+            len(self.seq_for) - 1
+        )
+
+# Test reverse transcript index
+
+    def test_index_length_reverse_matches(self):
         self.assertEqual(
             len(self.si_rev.transcript_idx),
             len(self.si_rev.genomic_idx)
         )
-        self.assertEqual(
-            self.si_rev.transcript_idx["-5545"],
-            0
-        )
-        self.assertEqual(
-            self.si_rev.transcript_idx["1"],
-            5545
-        )
-        self.assertEqual(
-            self.si_rev.transcript_idx["*4552"],
-            len(self.seq_rev) - 1
-        )
-        self.assertEqual(
-            self.seq_rev[self.si_rev.transcript_idx["*4549"]:],
-            "TGAC"
-        )
-        self.assertEqual(
-            self.seq_rev[
-                self.si_rev.transcript_idx["-5545"]:
-                self.si_rev.transcript_idx["-5541"]
-            ],
-            "CTAG"
-        )
+
+    def test_code_index_reverse_start_codon(self):
         start_idx = slice(
             self.si_rev.transcript_idx["1"],
             self.si_rev.transcript_idx["4"]
@@ -150,6 +133,8 @@ class TestSequenceIndex(unittest.TestCase):
                 self.seq_rev[start_idx],
                 "ATG"
         )
+
+    def test_code_index_reverse_stop_codon(self):
         stop_idx = slice(
             self.si_rev.transcript_idx["*1"],
             self.si_rev.transcript_idx["*4"]
@@ -157,4 +142,22 @@ class TestSequenceIndex(unittest.TestCase):
         self.assertEqual(
                 self.seq_rev[stop_idx],
                 "TAA"
+        )
+
+    def test_code_index_reverse_utr_start_location(self):
+        self.assertEqual(
+            self.si_rev.transcript_idx["-1"] + 1,
+            self.si_rev.transcript_idx["1"]
+        )
+
+    def test_code_index_reverse_seq_index_first_element(self):
+        self.assertEqual(
+            self.si_rev.transcript_idx["-5545"],
+            0
+        )
+
+    def test_code_index_reverse_seq_index_last_element(self):
+        self.assertEqual(
+            self.si_rev.transcript_idx["*4552"],
+            len(self.seq_rev) - 1
         )

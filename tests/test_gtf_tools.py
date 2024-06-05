@@ -1,3 +1,4 @@
+from intervaltree import IntervalTree
 import unittest
 from genefeatures import gtf_tools as gt
 
@@ -223,6 +224,14 @@ class TestGtfGff(unittest.TestCase):
                 r["start"]
         except KeyError:
             self.fail("KeyError raised after running remove_empty_fields")
+
+    def test_records_to_interval_tree(self):
+        gtf = gt.parse_gtf("tests/data/test_hs_grch38.gtf")
+        records = gtf.query(
+            {"attributes": {"transcript_id": "ENST00000511072"}}
+        )
+        itree = gt.records_to_interval_tree(records)
+        self.assertIsInstance(itree, IntervalTree)
 
 
 if __name__ == '__main__':

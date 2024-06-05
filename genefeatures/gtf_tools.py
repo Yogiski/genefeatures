@@ -1,4 +1,5 @@
-from typing import Type, TypeVar
+from intervaltree import Interval, IntervalTree
+from typing import Type, TypeVar, List
 from collections import OrderedDict
 
 
@@ -288,3 +289,14 @@ def parse_gtf(filename, gtf=None):
             gtf.add_record(record, linetype="record")
 
     return gtf
+
+
+def records_to_interval_tree(records: List[dict]) -> IntervalTree:
+    interval_tree = IntervalTree()
+
+    def add_inter(r):
+        interval_tree.add(Interval(r.pop("start"), r.pop("end"), data=r))
+    for r in records:
+        add_inter(r)
+
+    return interval_tree

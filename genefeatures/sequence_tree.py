@@ -254,7 +254,7 @@ class SequenceTree:
 
     def set_codon_index(self):
         nt_seq = self.get_coding_seq()
-        aa_seq = self.translate_coding_seq()
+        aa_seq = self.translate_coding_seq(nt_seq)
         codon_index = self._init_codon_index(aa_seq, nt_seq)
         self._codon_index = codon_index
 
@@ -263,7 +263,33 @@ class SequenceTree:
             self.set_codon_index()
         return self._codon_index
 
-    # mutation methods
+    def _dna_change(self, change):
+
+        change_type, groups = self._svp.match_dna_change_pattern(change)
+        if change_type == "subs":
+            mutated_seq = self._dna_snv(groups)
+
+        elif change_type == "point_del":
+            mutated_seq = self._dna_point_deletion(groups)
+
+        elif change_type == "range_del":
+            mutated_seq = self._dna_range_deletion(groups)
+
+        elif change_type == "ins":
+            mutated_seq = self._dna_insertion(groups)
+
+        elif change_type == "dup":
+            mutated_seq = self._dna_duplication(groups)
+
+        elif change_type == "inv":
+            mutated_seq = self._dna_inversion(groups)
+
+        elif change_type == "indel":
+            mutated_seq = self._dna_indel(groups)
+
+        self.set_coding_seq(mutated_seq[0])
+        self.set_full_seq(mutated_seq[1])
+
     def _mutate_sequence(
         self,
         sequence: Seq,
@@ -365,40 +391,3 @@ class SequenceTree:
                 f"got {groups}"
             )
         return self._get_mutated_sequences(start, end, ref=ref, alt=alt)
-
-    def _dna_change(self, change):
-
-        change_type, groups = self._svp.match_dna_change_pattern(change)
-        if change_type == "subs":
-            mutated_seq = self._dna_snv(groups)
-
-        elif change_type == "point_del":
-            mutated_seq = self._dna_point_deletion(groups)
-
-        elif change_type == "range_del":
-            mutated_seq = self._dna_range_deletion(groups)
-
-        elif change_type == "ins":
-            mutated_seq = self._dna_insertion(groups)
-
-        elif change_type == "dup":
-            mutated_seq = self._dna_duplication(groups)
-
-        elif change_type == "inv":
-            mutated_seq = self._dna_inversion(groups)
-
-        elif change_type == "indel":
-            mutated_seq = self._dna_indel(groups)
-
-        self.set_coding_seq(mutated_seq[0])
-        self.set_full_seq(mutated_seq[1])
-
-    def mutate(self, variation):
-
-        var_type, variation = self._svp.match_variation_pattern(variation)
-        if var_type in ["genomic", "cDNA"]:
-            self._dna_change(variation)
-        else:
-            raise ValueError(
-                f"variation type {var_type} has not been implemented"
-            )

@@ -1,7 +1,7 @@
 from intervaltree import Interval, IntervalTree
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
-# from functools import lru_cache
+from functools import lru_cache
 
 
 @dataclass
@@ -36,10 +36,11 @@ class SequenceIndex:
 
     def _init_genomic_index(self) -> Dict[int, int]:
         """make dict that converts genomic range to python index"""
-        start_pos = self.interval_tree.begin()
-        end_pos = self.interval_tree.end() + 1
-        gen_range = range(start_pos, end_pos)
-        seq_range = range(end_pos - start_pos)
+        gen_range = range(
+            self.interval_tree.begin(),
+            self.interval_tree.end() + 1
+            )
+        seq_range = range(len(gen_range))
         return dict(zip(gen_range, seq_range))
 
     def _sort_intervals_get_positions(
@@ -73,54 +74,18 @@ class SequenceIndex:
             return interval.begin, interval.end + 1, 1
 
     @staticmethod
-    def _handle_pre_start_utr(
-        indices: Tuple[int, int, int],
-        start_pos: int,
-        trans_indices: List[str]
+    def _extend_trans_indices(
+        trans_indices: List[str],
+        prefix: str,
+        start: int,
+        end: int,
+        step: int
     ) -> None:
-        seq_len = abs(start_pos - indices[0])
-        trans_indices.extend(
-            [f"-{i}" for i in range(seq_len, 0, -1)]
-        )
-
-    @staticmethod
-    def _handle_intron(
-        indices: Tuple[int, int, int],
-        last_indices: int,
-        cds_idx: int,
-        trans_indices: List[str]
-    ) -> None:
-        seq_len = abs(indices[0] - last_indices)
-        trans_indices.extend(
-            [f"{cds_idx}+{i}" for i in range(1, seq_len + 1)]
-        )
-
-    @staticmethod
-    def _handle_cds(
-        indices: Tuple[int, int, int],
-        cds_idx: int,
-        trans_indices: List[str]
-    ) -> int:
-        seq_len = abs((indices[0] - indices[1]))
-        trans_indices.extend(
-            [f"{i}" for i in range(cds_idx, cds_idx + seq_len)]
-        )
-        return cds_idx + seq_len
-
-    @staticmethod
-    def _handle_post_stop_utr(
-        indices: Tuple[int, int, int],
-        end_pos: int,
-        trans_indices: List[str]
-    ) -> None:
-        seq_len = abs(end_pos - indices[1])
-        trans_indices.extend(
-            [f"*{i}" for i in range(1, seq_len + 1)]
-        )
+        trans_indices.extend([f"{prefix}{i}" for i in range(start, end, step)])
 
     def _init_transcript_index(self) -> Dict[str, int]:
+
         trans_indices = []
-        pre_start_codon = True
         cds_idx = 1
         is_reverse = self.strand == "-"
         filtered = filter(
@@ -129,23 +94,36 @@ class SequenceIndex:
         sorted_intervals, start, end = self._sort_intervals_get_positions(
             filtered, is_reverse
         )
-        for i in sorted_intervals:
-            print(i.data["feature"], i.begin, i.end)
 
-        for interval in sorted_intervals:
+        for i, interval in enumerate(sorted_intervals):
             indices = self._get_interval_indeces(interval, is_reverse)
-            if pre_start_codon:
+            # make pre start codon index
+            if i == 0:
                 last_indices = indices[0] - indices[2]
-                pre_start_codon = False
-                self._handle_pre_start_utr(indices, start, trans_indices)
-            if indices[0] - indices[2] != last_indices:
-                self._handle_intron(
-                    indices, last_indices, cds_idx, trans_indices
+                self._extend_trans_indices(
+                    trans_indices, "-", abs(start - indices[0]), 0, -1
                 )
-            cds_idx = self._handle_cds(indices, cds_idx, trans_indices)
+            # make intron index
+            if indices[0] - indices[2] != last_indices:
+                self._extend_trans_indices(
+                    trans_indices,
+                    f"{cds_idx}+",
+                    1,
+                    abs(indices[0] - last_indices) + 1,
+                    1
+                )
+            # make CDS index
+            seq_len = abs(indices[0] - indices[1])
+            self._extend_trans_indices(
+                trans_indices, "", cds_idx, cds_idx + seq_len, 1
+            )
+            cds_idx += seq_len
             last_indices = indices[1]
+        # stop codon - post stop utr index
+        self._extend_trans_indices(
+            trans_indices, "*", 1, abs(end - indices[1]) + 1, 1
+        )
 
-        self._handle_post_stop_utr(indices, end, trans_indices)
         seq_idx = self.genomic_idx.values()
-        transcript_idx = dict(zip(trans_indices, seq_idx))
+        transcript_idx = dict(zip(trans_indices, sorted(seq_idx)))
         return transcript_idx

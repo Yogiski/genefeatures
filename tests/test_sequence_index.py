@@ -163,3 +163,32 @@ class TestSequenceIndex(unittest.TestCase):
             self.si_rev.transcript_idx["*4552"],
             len(self.seq_rev) - 1
         )
+
+    def test_log_change(self):
+        self.si_for.log_change("insertion", 10, 15, 5)
+        self.si_for.log_change("deletion", 20, 25, -5)
+        expected_log = [("insertion", 10, 15, 5), ("deletion", 20, 25, -5)]
+        self.assertEqual(self.si_for.change_log, expected_log)
+
+    def test_update_index_insertion(self):
+        original_idx = self.si_for.transcript_idx.copy()
+        self.si_for.update_index(10, 15, 5)
+        for key, value in original_idx.items():
+            if value >= 15:
+                self.assertEqual(self.si_for.transcript_idx[key], value + 5)
+            else:
+                self.assertEqual(self.si_for.transcript_idx[key], value)
+
+    def test_update_index_deletion(self):
+        original_idx = self.si_for.transcript_idx.copy()
+        self.si_for.update_index(10, 15, -5)
+        for key, value in original_idx.items():
+            if value >= 15:
+                self.assertEqual(self.si_for.transcript_idx[key], value - 5)
+            else:
+                self.assertEqual(self.si_for.transcript_idx[key], value)
+
+    def test_update_index_no_change(self):
+        original_idx = self.si_for.transcript_idx.copy()
+        self.si_for.update_index(10, 15, 0)
+        self.assertEqual(self.si_for.transcript_idx, original_idx)

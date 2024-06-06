@@ -1,9 +1,7 @@
+from __future__ import annotations
 from intervaltree import Interval, IntervalTree
-from typing import Type, TypeVar, List
+from typing import List, Dict
 from collections import OrderedDict
-
-
-gtf = TypeVar("gtf", bound="GtfGff")
 
 
 class GtfGff:
@@ -26,9 +24,12 @@ class GtfGff:
         if linetype == "meta":
             self.metadata.update(record)
             return
-
         if not isinstance(record, dict):
-            raise TypeError
+            raise TypeError(
+                f"record argument must be type {dict}; "
+                f"got {record} of type {type(record)}"
+            )
+
         if record_hash is None:
             record_hash = hash(str(record))
 
@@ -68,19 +69,19 @@ class GtfGff:
             hashes += self._lookup_hash(self.attribute_index[k], v)
         return hashes
 
-    def _get_records(self, hashes: int | list | set) -> list:
+    def _get_records(self, hashes: int | list | set) -> List[dict]:
         if isinstance(hashes, int):
             return [self.records[hashes]]
         else:
             return [self.records[h] for h in hashes]
 
-    def get_records_by_feature(self, feature_type: str | list) -> list:
+    def get_records_by_feature(self, feature_type: str | list) -> List[dict]:
         records = self._get_records(
             self._lookup_hash(self.feature_index, feature_type)
         )
         return records
 
-    def get_records_by_seqname(self, seqname: str | int | list) -> list:
+    def get_records_by_seqname(self, seqname: str | int | list) -> List[dict]:
 
         if isinstance(seqname, int):
             seqname = str(seqname)
@@ -89,11 +90,11 @@ class GtfGff:
         )
         return records
 
-    def get_records_by_attribute(self, lookup_dict: dict) -> list:
+    def get_records_by_attribute(self, lookup_dict: dict) -> List[dict]:
         hashes = self._lookup_attribute_hashes(lookup_dict)
         return self._get_records(set(hashes))
 
-    def __getitem__(self, idx: int | slice | list) -> dict:
+    def __getitem__(self, idx: int | slice | list) -> dict | List[dict]:
 
         if type(idx) not in (int, slice, list):
             raise TypeError(
@@ -120,17 +121,23 @@ class GtfGff:
         return len(self._record_hashes)
 
     @classmethod
-    def gtf_gff_from_records(cls: Type[gtf], records) -> gtf:
+    def gtf_gff_from_records(cls: GtfGff, records: dict) -> GtfGff:
 
         new_gtf = cls()
         if isinstance(records, dict):
             new_gtf.add_record(records)
-        else:
+        elif isinstance(records, list):
             for r in records:
                 new_gtf.add_record(r)
+        else:
+            raise TypeError(
+                f"records must be type {dict}; "
+                f"got {records} of type {type(records)}"
+            )
+
         return new_gtf
 
-    def _process_query_and(self, value, depth=0):
+    def _process_query_and(self, value, depth: int = 0):
         processed = self._process_query(value, depth=depth)
         processed = [set(lis) for lis in processed if isinstance(lis, list)]
         new_hashes = set(processed.pop(0))
@@ -141,18 +148,21 @@ class GtfGff:
         processed = [self._process_query(v, depth=depth)[0] for v in value]
         return [item for sublist in processed for item in sublist]
 
-    def _process_query_not(self, value, hashes, depth=0):
+    def _process_query_not(
+        self,
+        value: Dict[str, str],
+        hashes: List[str],
+        depth: int = 0
+    ) -> List[str]:
 
         processed = self._process_query(value, depth=depth)[0]
-        if hashes == []:
+        if not hashes:
             hashes = [self._record_hashes]
-        new_hashes = []
-        for sub in hashes:
-            new_hashes.append(set(sub) - set(processed))
+        new_hashes = [set(sub) - set(processed) for sub in hashes]
 
         return new_hashes
 
-    def _process_query(self, conditions: dict, depth=0) -> list:
+    def _process_query(self, conditions: Dict[str, str], depth=0) -> List[str]:
 
         depth += 1
         hashes = []
@@ -199,7 +209,11 @@ class GtfGff:
     def _process_query_string(self):
         raise NotImplementedError
 
-    def query(self, query: str | dict, return_records=False) -> gtf | dict:
+    def query(
+        self,
+        query: str | dict,
+        return_records=False
+    ) -> GtfGff | List[dict]:
 
         if isinstance(query, str):
             query = self._process_query_string(query)
@@ -212,11 +226,11 @@ class GtfGff:
         else:
             return self.gtf_gff_from_records(records)
 
-    def export_records(self):
+    def export_records(self) -> List[dict]:
         # list comprehension ensures a copy of each record is made
         return [dict(record) for record in self.records.values()]
 
-    def _remove_record(self, record_hash):
+    def _remove_record(self, record_hash: str) -> None:
 
         record = self.records[record_hash]
         self.feature_index[record["feature"]].remove(record_hash)
@@ -226,7 +240,7 @@ class GtfGff:
         self._record_hashes.remove(record_hash)
         del self.records[record_hash]
 
-    def remove_empty_field(self, field: str | tuple | list):
+    def remove_empty_field(self, field: str | tuple | list) -> None:
         empty = []
         for h in self._record_hashes:
             try:

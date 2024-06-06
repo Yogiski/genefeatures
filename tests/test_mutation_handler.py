@@ -1,5 +1,6 @@
 import unittest
 import pickle
+from copy import deepcopy
 from Bio.Seq import Seq, reverse_complement
 from genefeatures import fasta_tools as ft
 from genefeatures import gtf_tools as gt
@@ -20,7 +21,7 @@ class TestSequenceHandler(unittest.TestCase):
             return_records=True
         )
         si = SequenceIndex(gt.records_to_interval_tree(kras))
-        self.si = si
+        self.si = deepcopy(si)
         start = self.si.interval_tree.begin()
         end = self.si.interval_tree.end()
 
@@ -110,15 +111,18 @@ class TestSequenceHandler(unittest.TestCase):
         self.assertEqual(mt_seq[idx:idx+3], "TGG")
         self.assertEqual(mt_seq[idx+3:idx+6], "GGC")
 
-    def test_dna_indel(self):
+    def test_dna_indel_no_ref(self):
+
+        idx = self.si["34"]
         mt_seq = self.sh.dna_indel(
             self.seq, ("34", "36", "ACGT", None, None, None, None)
         )
-        idx = self.si["34"]
         self.assertEqual(mt_seq[idx-3:idx], "GCT")
         self.assertEqual(mt_seq[idx:idx+4], "ACGT")
         self.assertEqual(mt_seq[idx+4:idx+7], "GGC")
 
+    def test_dna_indel_with_ref(self):
+        idx = self.si["34"]
         mt_seq = self.sh.dna_indel(
             self.seq, (None, None, None, "34", "36", "GGT", "ACGT")
         )

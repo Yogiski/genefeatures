@@ -9,8 +9,11 @@ class SequenceIndex:
     interval_tree: IntervalTree
     strand: str = field(init=False)
     genomic_range: str = field(init=False)
-    seq_index: Dict[int, int] = field(init=False, default_factory=dict)
-    code_index: Dict[str, int] = field(init=False, default_factory=dict)
+    genomic_index: Dict[int, int] = field(init=False, default_factory=dict)
+    transcript_index: Dict[str, int] = field(init=False, default_factory=dict)
+    change_log: List[Tuple[str, int, int]] = field(
+        init=False, default_factory=list
+    )
 
     def __post_init__(self):
         self.strand = self.get_strand()
@@ -129,3 +132,23 @@ class SequenceIndex:
 
     def __getitem__(self, key: str) -> int:
         return self.transcript_idx[key]
+
+    def log_change(
+        self,
+        mutation_type: str,
+        start: int,
+        end: int,
+        length: int
+    ) -> None:
+        """Log changes to the sequence."""
+        self.change_log.append((mutation_type, start, end, length))
+
+    def update_index(self, start: int, end: int, length_change: int) -> None:
+        """Update index based on the mutation."""
+        updated_transcript_idx = {}
+        for key, value in self.transcript_idx.items():
+            if value >= end:
+                updated_transcript_idx[key] = value + length_change
+            else:
+                updated_transcript_idx[key] = value
+        self.transcript_idx = updated_transcript_idx

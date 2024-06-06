@@ -28,7 +28,10 @@ class MutationHandler:
         pos, ref, alt = groups
         pos = self.seq_index[pos]
         end = pos + 1
-        return self.mutate_sequence(seq, pos, end, ref=ref, alt=alt)
+        mutated_seq = self.mutate_sequence(seq, pos, end, ref, alt)
+        self.seq_index.log_change("snv", pos, ref, alt)
+
+        return mutated_seq
 
     def dna_point_deletion(self, seq: Seq, groups: Tuple[str, str]) -> Seq:
         pos, ref = groups
@@ -36,7 +39,11 @@ class MutationHandler:
         if ref == "":
             ref = seq[pos]
         end = pos + 1
-        return self.mutate_sequence(seq, pos, end, ref, "")
+        mutated_seq = self.mutate_sequence(seq, pos, end, ref, "")
+        self.seq_index.update_index(pos, len(ref), 0)
+        self.seq_index.log_change("del", pos, ref, "")
+
+        return mutated_seq
 
     def dna_range_deletion(
         self, seq: Seq, groups: Tuple[str, str, str]
@@ -46,28 +53,43 @@ class MutationHandler:
         start, end = self.seq_index[start] - 1, self.seq_index[end]
         if ref == "":
             ref = seq[start:end]
-        return self.mutate_sequence(seq, start, end, ref, "")
+        mutated_seq = self.mutate_sequence(seq, start, end, ref, "")
+        self.seq_index.update_index(start, len(ref), 0)
+        self.seq_index.log_change("del", start, ref, "")
+
+        return mutated_seq
 
     def dna_insertion(self, seq: Seq, groups: Tuple[str, str, str]) -> Seq:
         start, end, alt = groups
         start, end = self.seq_index[start] + 1, self.seq_index[end] + 1
         end = start
         ref = seq[start:end]
-        return self.mutate_sequence(seq, start, end, ref, alt)
+        mutated_seq = self.mutate_sequence(seq, start, end, ref, alt)
+        self.seq_index.update_index(start, len(ref), len(alt))
+        self.seq_index.log_change("ins", start, ref, alt)
+
+        return mutated_seq
 
     def dna_duplication(self, seq: Seq, groups: Tuple[str, str]) -> Seq:
         start, end = groups
         start, end = self.seq_index[start], self.seq_index[end] + 1
         ref = seq[start:end]
         alt = ref + ref
-        return self.mutate_sequence(seq, start, end, ref, alt)
+        mutated_seq = self.mutate_sequence(seq, start, end, ref, alt)
+        self.seq_index.update_index(start, len(ref), len(alt))
+        self.seq_index.log_change("dup", start, ref, alt)
+
+        return mutated_seq
 
     def dna_inversion(self, seq: Seq, groups: Tuple[str, str, str]) -> tuple:
+
         start, end, length = groups
         start, end = self.seq_index[start], self.seq_index[end]+1
         ref = seq[start:end]
         alt = ref[::-1]
-        return self.mutate_sequence(seq, start, end, ref, alt)
+        mutated_seq = self.mutate_sequence(seq, start, end, ref, alt)
+        self.seq_index.log_change("inv", start, ref, alt)
+        return mutated_seq
 
     def dna_indel(
         self, seq: Seq, groups: Tuple[str, str, str, str, str, str]
@@ -87,4 +109,8 @@ class MutationHandler:
                 "either first 3 entries or last 4 entries must be None "
                 f"got {groups}"
             )
-        return self.mutate_sequence(seq, start, end, ref, alt)
+        mutated_seq = self.mutate_sequence(seq, start, end, ref, alt)
+        self.seq_index.update_index(start, len(ref), len(alt))
+        self.seq_index.log_change("indel", start, ref, alt)
+
+        return mutated_seq

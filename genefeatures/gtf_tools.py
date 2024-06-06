@@ -93,7 +93,7 @@ class GtfGff:
         hashes = self._lookup_attribute_hashes(lookup_dict)
         return self._get_records(set(hashes))
 
-    def __getitem__(self, idx: int | slice | list):
+    def __getitem__(self, idx: int | slice | list) -> dict:
 
         if type(idx) not in (int, slice, list):
             raise TypeError(
@@ -197,7 +197,7 @@ class GtfGff:
         return hashes
 
     def _process_query_string(self):
-        pass
+        raise NotImplementedError
 
     def query(self, query: str | dict, return_records=False) -> gtf | dict:
 

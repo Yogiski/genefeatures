@@ -13,7 +13,8 @@ class TestSequenceIndex(unittest.TestCase):
         # forward transcript testing
         gtf = gt.parse_gtf("tests/data/test_hs_grch38.gtf")
         records = gtf.query(
-            {"attributes": {"transcript_id": "ENST00000511072"}}
+            {"attributes": {"transcript_id": "ENST00000511072"}},
+            return_records=True
         )
         self.itree_for = gt.records_to_interval_tree(records)
         start = self.itree_for.begin()
@@ -31,7 +32,8 @@ class TestSequenceIndex(unittest.TestCase):
         with open("tests/data/kras_gtfgff.pkl", "rb") as f:
             kras_gtf = pickle.load(f)
         kras = kras_gtf.query(
-            {"attributes": {"transcript_id": "ENST00000311936"}}
+            {"attributes": {"transcript_id": "ENST00000311936"}},
+            return_records=True
         )
         self.itree_rev = gt.records_to_interval_tree(kras)
         start = self.itree_rev.begin() - 25195145

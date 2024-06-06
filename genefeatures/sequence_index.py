@@ -126,3 +126,6 @@ class SequenceIndex:
         seq_idx = self.genomic_idx.values()
         transcript_idx = dict(zip(trans_indices, sorted(seq_idx)))
         return transcript_idx
+
+    def __getitem__(self, key: str) -> int:
+        return self.transcript_idx[key]

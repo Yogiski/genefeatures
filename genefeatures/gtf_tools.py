@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 from intervaltree import Interval, IntervalTree
 from typing import List, Dict
 from collections import OrderedDict
@@ -269,6 +270,9 @@ def parse_gtf(filename, gtf=None):
     elif not isinstance(gtf, GtfGff):
         raise TypeError(f"gtf provided is not {GtfGff}, {type(gtf)} found\n")
 
+    # Define regex pattern for attributes
+    attr_pattern = re.compile(r'(\w+)\s+"([^"]+)"')
+
     with open(filename, 'r') as file:
         for line in file:
 
@@ -282,11 +286,7 @@ def parse_gtf(filename, gtf=None):
             # Split line by tab
             fields = line.strip().split('\t')
             # Parse attributes
-            attributes = {}
-            for attribute in fields[8].split(';'):
-                key_value = attribute.strip().split(' ')
-                if len(key_value) == 2:
-                    attributes[key_value[0]] = key_value[1].strip('"')
+            attributes = dict(attr_pattern.findall(fields[8]))
 
             # Create feature dictionary
             record = {
@@ -306,11 +306,16 @@ def parse_gtf(filename, gtf=None):
 
 
 def records_to_interval_tree(records: List[dict]) -> IntervalTree:
-    interval_tree = IntervalTree()
 
-    def add_inter(r):
-        interval_tree.add(Interval(r.pop("start"), r.pop("end"), data=r))
+    interval_tree = IntervalTree()
     for r in records:
-        add_inter(r)
+        if r["start"] == r["end"]:
+            continue
+        interval = Interval(
+                r["start"],
+                r["end"],
+                data={k: v for k, v in r.items() if k not in ["start", "end"]}
+            )
+        interval_tree.add(interval)
 
     return interval_tree

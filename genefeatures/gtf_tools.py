@@ -30,7 +30,6 @@ class GtfGff:
                 f"record argument must be type {dict}; "
                 f"got {record} of type {type(record)}"
             )
-
         if record_hash is None:
             record_hash = hash(str(record))
 
@@ -38,22 +37,17 @@ class GtfGff:
         self.records[record_hash] = record
 
         feature_type = record["feature"]
-        if feature_type not in self.feature_index.keys():
-            self.feature_index[feature_type] = []
-        self.feature_index[feature_type].append(record_hash)
+        self.feature_index.setdefault(feature_type, []).append(record_hash)
 
         seqname = record["seqname"]
-        if seqname not in self.seqname_index.keys():
-            self.seqname_index[seqname] = []
-        self.seqname_index[seqname].append(record_hash)
+        self.seqname_index.setdefault(seqname, []).append(record_hash)
 
         # Indexing by attributes
         for attribute, value in record['attributes'].items():
-            if attribute not in self.attribute_index:
-                self.attribute_index[attribute] = {}
-            if value not in self.attribute_index[attribute]:
-                self.attribute_index[attribute][value] = []
-            self.attribute_index[attribute][value].append(record_hash)
+            self.attribute_index \
+                .setdefault(attribute, {}) \
+                .setdefault(value, []) \
+                .append(record_hash)
 
     @staticmethod
     def _lookup_hash(index: dict, keys: str | list):
@@ -306,16 +300,16 @@ def parse_gtf(filename, gtf=None):
 
 
 def records_to_interval_tree(records: List[dict]) -> IntervalTree:
-
     interval_tree = IntervalTree()
     for r in records:
         if r["start"] == r["end"]:
             continue
-        interval = Interval(
+        interval_tree.add(
+            Interval(
                 r["start"],
                 r["end"],
                 data={k: v for k, v in r.items() if k not in ["start", "end"]}
             )
-        interval_tree.add(interval)
+        )
 
     return interval_tree

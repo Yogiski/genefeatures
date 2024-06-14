@@ -202,6 +202,7 @@ class TestGtfGff(unittest.TestCase):
 
     def test_export_records(self):
         recs = self.gtf.export_records()
+        print(len(self.gtf.records))
         self.assertTrue(isinstance(recs, list))
         self.assertTrue(isinstance(recs[0], dict))
         self.assertEqual(len(recs), len(self.gtf))

@@ -212,4 +212,3 @@ class TestSequenceIndex(unittest.TestCase):
         original_idx = self.si_for.transcript_idx.copy()
         self.si_for.update_index(10, 15, 0)
         self.assertEqual(self.si_for.transcript_idx, original_idx)
-

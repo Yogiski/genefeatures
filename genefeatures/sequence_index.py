@@ -9,8 +9,8 @@ class SequenceIndex:
     interval_tree: IntervalTree
     strand: str = field(init=False)
     genomic_range: str = field(init=False)
-    genomic_index: Dict[int, int] = field(init=False, default_factory=dict)
-    transcript_index: Dict[str, int] = field(init=False, default_factory=dict)
+    genomic_idx: Dict[int, int] = field(init=False, default_factory=dict)
+    transcript_idx: Dict[str, int] = field(init=False, default_factory=dict)
     change_log: List[Tuple[str, int, int]] = field(
         init=False, default_factory=list
     )
@@ -107,13 +107,18 @@ class SequenceIndex:
                 )
             # make intron index
             if indices[0] - indices[2] != last_indices:
+                intron_length = abs(indices[0] - last_indices) + 1
+                remainder = intron_length % 2
+                mid_point = (intron_length + 1) // 2
+                # First half of intron
                 self._extend_trans_indices(
-                    trans_indices,
-                    f"{cds_idx}+",
-                    1,
-                    abs(indices[0] - last_indices) + 1,
-                    1
+                    trans_indices, f"{cds_idx-1}+", 1, mid_point - remainder, 1
                 )
+                # Second half of intron
+                self._extend_trans_indices(
+                    trans_indices, f"{cds_idx}-", mid_point, 0, -1
+                )
+
             # make CDS index
             seq_len = abs(indices[0] - indices[1])
             self._extend_trans_indices(

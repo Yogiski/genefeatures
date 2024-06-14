@@ -164,6 +164,26 @@ class TestSequenceIndex(unittest.TestCase):
             len(self.seq_rev) - 1
         )
 
+    def test_intron_indices_forward(self):
+        self.assertEqual(
+            self.si_for["38-1"],
+            self.si_for["38"] - 1
+        )
+        self.assertEqual(
+            self.si_for["37+1"],
+            self.si_for["37"] + 1
+        )
+
+    def test_intron_indices_reverse(self):
+        self.assertEqual(
+            self.si_rev["112-1"],
+            self.si_rev["112"] - 1
+        )
+        self.assertEqual(
+            self.si_rev["111+1"],
+            self.si_rev["111"] + 1
+        )
+
     def test_log_change(self):
         self.si_for.log_change("insertion", 10, 15, 5)
         self.si_for.log_change("deletion", 20, 25, -5)
@@ -192,3 +212,4 @@ class TestSequenceIndex(unittest.TestCase):
         original_idx = self.si_for.transcript_idx.copy()
         self.si_for.update_index(10, 15, 0)
         self.assertEqual(self.si_for.transcript_idx, original_idx)
+

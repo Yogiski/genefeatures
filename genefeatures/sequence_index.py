@@ -83,6 +83,7 @@ class SequenceIndex:
         end: int,
         step: int
     ) -> None:
+
         trans_indices.extend([f"{prefix}{i}" for i in range(start, end, step)])
 
     def _init_transcript_index(self) -> Dict[str, int]:

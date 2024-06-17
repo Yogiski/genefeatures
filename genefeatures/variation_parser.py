@@ -7,7 +7,7 @@ class SequenceVariationParser:
     def __init__(self):
 
         self.seq_var_patterns = {
-            "genomic": re.compile(r"g\.(.+)"),
+            "genomic": re.compile(r"g\.(.+)|n\.(.+)"),
             "cDNA": re.compile(r"c\.(.+)"),
             "mitochondrial": re.compile(r"m\.(.+)"),
             "RNA": re.compile(r"r\.(.+)"),

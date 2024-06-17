@@ -132,14 +132,18 @@ class GtfGff:
 
         return new_gtf
 
-    def _process_query_and(self, value, depth: int = 0):
+    def _process_query_and(
+        self, value: Dict[str, str], depth: int = 0
+    ) -> List[int]:
         processed = self._process_query(value, depth=depth)
         processed = [set(lis) for lis in processed if isinstance(lis, list)]
         new_hashes = set(processed.pop(0))
         new_hashes = new_hashes.intersection(*processed)
         return new_hashes
 
-    def _process_query_or(self, value, depth=0):
+    def _process_query_or(
+        self, value: Dict[str, str], depth: int = 0
+    ) -> List[int]:
         processed = [self._process_query(v, depth=depth)[0] for v in value]
         return [item for sublist in processed for item in sublist]
 
@@ -148,7 +152,7 @@ class GtfGff:
         value: Dict[str, str],
         hashes: List[str],
         depth: int = 0
-    ) -> List[str]:
+    ) -> List[int]:
 
         processed = self._process_query(value, depth=depth)[0]
         if not hashes:
@@ -157,7 +161,9 @@ class GtfGff:
 
         return new_hashes
 
-    def _process_query(self, conditions: Dict[str, str], depth=0) -> List[str]:
+    def _process_query(
+        self, conditions: Dict[str, str], depth: int = 0
+    ) -> List[int]:
 
         depth += 1
         hashes = []

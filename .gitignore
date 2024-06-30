@@ -2,3 +2,4 @@
 .DS_store
 notebooks/*
 .vscode/*
+*.sh

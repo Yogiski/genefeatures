@@ -1,7 +1,7 @@
 from __future__ import annotations
 import re
 from intervaltree import Interval, IntervalTree
-from typing import List, Dict
+from typing import List
 from collections import OrderedDict
 
 
@@ -19,7 +19,7 @@ class GtfGff:
         self,
         record: dict,
         linetype: str = "record",
-        record_hash: int = None
+        record_hash: int | None = None
     ):
 
         if linetype == "meta":
@@ -50,19 +50,23 @@ class GtfGff:
                 .append(record_hash)
 
     @staticmethod
-    def _lookup_hash(index: dict, keys: str | list):
+    def _lookup_hash(index: dict, keys: str | list | None):
         if keys is None:
             return []
         if isinstance(keys, str):
             return index.get(keys, [])
         else:
-            return list(set(h for key in keys for h in index.get(key)))
+            return list(set(h for key in keys for h in index[key]))
 
     def _lookup_attribute_hashes(self, lookup_dict):
-        hashes = []
+        hashes = None
         for k, v in lookup_dict.items():
-            hashes += self._lookup_hash(self.attribute_index[k], v)
-        return hashes
+            current_hashes = set(self._lookup_hash(self.attribute_index[k], v))
+            if hashes is None:
+                hashes = current_hashes
+            else:
+                hashes &= current_hashes
+        return list(hashes) if hashes else []
 
     def _get_records(self, hashes: int | list | set) -> List[dict]:
         if isinstance(hashes, int):
@@ -116,7 +120,7 @@ class GtfGff:
         return len(self._record_hashes)
 
     @classmethod
-    def gtf_gff_from_records(cls: GtfGff, records: dict) -> GtfGff:
+    def gtf_gff_from_records(cls, records: dict) -> GtfGff:
 
         new_gtf = cls()
         if isinstance(records, dict):
@@ -132,38 +136,35 @@ class GtfGff:
 
         return new_gtf
 
-    def _process_query_and(
-        self, value: Dict[str, str], depth: int = 0
-    ) -> List[int]:
+    def _process_query_and(self, value: dict, depth: int = 0) -> set:
         processed = self._process_query(value, depth=depth)
-        processed = [set(lis) for lis in processed if isinstance(lis, list)]
-        new_hashes = set(processed.pop(0))
-        new_hashes = new_hashes.intersection(*processed)
+        processed_sets = [
+            set(lis) for lis in processed if isinstance(lis, list)
+        ]
+        new_hashes = set(processed_sets.pop(0))
+        new_hashes = new_hashes.intersection(*processed_sets)
         return new_hashes
 
-    def _process_query_or(
-        self, value: Dict[str, str], depth: int = 0
-    ) -> List[int]:
+    def _process_query_or(self, value: list, depth: int = 0) -> list:
         processed = [self._process_query(v, depth=depth)[0] for v in value]
         return [item for sublist in processed for item in sublist]
 
     def _process_query_not(
         self,
-        value: Dict[str, str],
-        hashes: List[str],
+        value: dict,
+        hashes: list,
         depth: int = 0
-    ) -> List[int]:
+    ) -> list:
 
         processed = self._process_query(value, depth=depth)[0]
         if not hashes:
             hashes = [self._record_hashes]
+
         new_hashes = [set(sub) - set(processed) for sub in hashes]
 
         return new_hashes
 
-    def _process_query(
-        self, conditions: Dict[str, str], depth: int = 0
-    ) -> List[int]:
+    def _process_query(self, conditions: dict, depth: int = 0) -> list:
 
         depth += 1
         hashes = []

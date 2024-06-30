@@ -1,5 +1,6 @@
-from intervaltree import IntervalTree
+import pickle
 import unittest
+from intervaltree import IntervalTree
 from genefeatures import gtf_tools as gt
 
 
@@ -9,6 +10,9 @@ class TestGtfGff(unittest.TestCase):
 
         self.empty = gt.GtfGff()
         self.gtf = gt.parse_gtf("tests/data/test_hs_grch38.gtf")
+        with open("tests/data/kras_gtfgff.pkl", "rb") as f:
+            kras_gtf = pickle.load(f)
+        self.kras = kras_gtf
 
     def test_init(self):
 
@@ -233,6 +237,16 @@ class TestGtfGff(unittest.TestCase):
         )
         itree = gt.records_to_interval_tree(records)
         self.assertIsInstance(itree, IntervalTree)
+
+    def test_implicit_and_in_query(self):
+        records = self.kras.query(
+            {"attributes": {"gene_name": "KRAS", "tag": "MANE_Select"}},
+            return_records=True
+        )
+        tags = []
+        for r in records:
+            tags.append(r["attributes"]["tag"])
+        self.assertEqual(len(set(tags)), 1)
 
 
 if __name__ == '__main__':

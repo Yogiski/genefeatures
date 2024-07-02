@@ -1,0 +1,12 @@
+[package]
+name = "rust"
+version = "0.1.0"
+authors = ["Chris cyogodzi@gmail.com"]
+
+[lib]
+name = "gtf_tools"
+path = "src/gtf_tools/lib.rs"
+
+[[test]]
+name = "gtf_record_test"
+path = "tests/gtf_record_test.rs"

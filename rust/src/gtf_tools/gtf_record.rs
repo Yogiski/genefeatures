@@ -1,61 +1,62 @@
 #[derive(Debug)]
 pub struct GtfRecord {
-    pub seqname: String,
-    pub source: String,
-    pub feature: String,
+    pub seqname: Box<str>,
+    pub source: Box<str>,
+    pub feature: Box<str>,
     pub start: u32,
     pub end: u32,
     pub score: f64,
-    pub strand: String,
+    pub strand: Box<str>,
     pub frame: u8,
-    pub gene_id: Option<String>,
-    pub gene_name: Option<String>,
-    pub gene_source: Option<String>,
+    pub gene_id: Option<Box<str>>,
+    pub gene_name: Option<Box<str>>,
+    pub gene_source: Option<Box<str>>,
     pub gene_version: Option<u8>,
-    pub gene_biotype: Option<String>,
-    pub transcript_id: Option<String>,
-    pub transcript_name: Option<String>,
-    pub transcript_source: Option<String>,
+    pub gene_biotype: Option<Box<str>>,
+    pub transcript_id: Option<Box<str>>,
+    pub transcript_name: Option<Box<str>>,
+    pub transcript_source: Option<Box<str>>,
     pub transcript_version: Option<u8>,
-    pub transcript_biotype: Option<String>,
+    pub transcript_biotype: Option<Box<str>>,
     pub transcript_support_level: Option<u8>,
-    pub exon_id: Option<String>,
+    pub exon_id: Option<Box<str>>,
     pub exon_number: Option<u8>,
     pub exon_version: Option<u8>,
-    pub protein_id: Option<String>,
+    pub protein_id: Option<Box<str>>,
     pub protein_version: Option<u8>,
-    pub ccds_id: Option<String>,
-    pub tag: Option<Vec<String>>
+    pub ccds_id: Option<Box<str>>,
+    pub tag: Option<Vec<Box<str>>>
 }
 
 impl GtfRecord {
+
     pub fn new(
-        seqname: String,
-        source: String,
-        feature: String,
+        seqname: Box<str>,
+        source: Box<str>,
+        feature: Box<str>,
         start: u32,
         end: u32,
         score: f64,
-        strand: String,
+        strand: Box<str>,
         frame: u8,
-        gene_id: Option<String>,
-        gene_name: Option<String>,
-        gene_source: Option<String>,
+        gene_id: Option<Box<str>>,
+        gene_name: Option<Box<str>>,
+        gene_source: Option<Box<str>>,
         gene_version: Option<u8>,
-        gene_biotype: Option<String>,
-        transcript_id: Option<String>,
-        transcript_name: Option<String>,
-        transcript_source: Option<String>,
+        gene_biotype: Option<Box<str>>,
+        transcript_id: Option<Box<str>>,
+        transcript_name: Option<Box<str>>,
+        transcript_source: Option<Box<str>>,
         transcript_version: Option<u8>,
-        transcript_biotype: Option<String>,
+        transcript_biotype: Option<Box<str>>,
         transcript_support_level: Option<u8>,
-        exon_id: Option<String>,
+        exon_id: Option<Box<str>>,
         exon_number: Option<u8>,
         exon_version: Option<u8>,
-        protein_id: Option<String>,
+        protein_id: Option<Box<str>>,
         protein_version: Option<u8>,
-        ccds_id: Option<String>,
-        tag: Option<Vec<String>>
+        ccds_id: Option<Box<str>>,
+        tag: Option<Vec<Box<str>>>
     ) -> Self {
         Self {
             seqname,
@@ -91,13 +92,12 @@ impl GtfRecord {
 
         let fields: Vec<&str> = line.split("\t").collect();
         if fields.len() != 9 {
-            panic!(
-                "Invalid GTF line: expected 9 fields, found {}", fields.len()
-            )
+            panic!("Invalid GTF line: expected 9 fields, found {}", fields.len())
         }
-        let seqname: String = fields[0].to_string();
-        let source: String = fields[1].to_string();
-        let feature: String = fields[2].to_string();
+        // get mandatory fields from line 
+        let seqname: Box<str> = Box::from(fields[0]);
+        let source: Box<str> = Box::from(fields[1]);
+        let feature: Box<str> = Box::from(fields[2]);
         let start: u32 = fields[3]
             .parse::<u32>()
             .expect("Invalid start field");
@@ -110,32 +110,34 @@ impl GtfRecord {
                 .parse::<f64>()
                 .expect("Invalid score field")
         };
-        let strand: String = fields[6].to_string();
+        let strand: Box<str> = Box::from(fields[6]);
         let frame: u8 = match fields[7] {
             "." => 0,
             _ => fields[7]
                 .parse::<u8>()
                 .expect("Invalid frame field")
         };
-        let mut gene_id: Option<String> = None;
-        let mut gene_name: Option<String> = None;
-        let mut gene_source: Option<String> = None;
+        // init optional fields as none
+        let mut gene_id: Option<Box<str>> = None;
+        let mut gene_name: Option<Box<str>> = None;
+        let mut gene_source: Option<Box<str>> = None;
         let mut gene_version: Option<u8> = None;
-        let mut gene_biotype: Option<String> = None;
-        let mut transcript_id: Option<String> = None;
-        let mut transcript_name: Option<String> = None;
-        let mut transcript_source: Option<String> = None;
+        let mut gene_biotype: Option<Box<str>> = None;
+        let mut transcript_id: Option<Box<str>> = None;
+        let mut transcript_name: Option<Box<str>> = None;
+        let mut transcript_source: Option<Box<str>> = None;
         let mut transcript_version: Option<u8> = None;
-        let mut transcript_biotype: Option<String> = None;
+        let mut transcript_biotype: Option<Box<str>> = None;
         let mut transcript_support_level: Option<u8> = None;
-        let mut exon_id: Option<String> = None;
+        let mut exon_id: Option<Box<str>> = None;
         let mut exon_number: Option<u8> = None;
         let mut exon_version: Option<u8> = None;
-        let mut protein_id: Option<String> = None;
+        let mut protein_id: Option<Box<str>> = None;
         let mut protein_version: Option<u8> = None;
-        let mut ccds_id: Option<String> = None;
-        let mut tag: Option<Vec<String>> = None;
+        let mut ccds_id: Option<Box<str>> = None;
+        let mut tag: Option<Vec<Box<str>>> = None;
 
+        // process attributes field to file optional fields
         let attributes: &str = fields[8];
         let attr_iter = attributes
             .split(";")
@@ -147,11 +149,12 @@ impl GtfRecord {
             let key: &str = iter
                 .next()
                 .expect("Invalid attribute format");
-            let value: String = iter
+            let value: Box<str> = iter
                 .next()
                 .expect("Invalid attribute format")
                 .trim_matches('"')
-                .to_string();
+                .into();
+
             match key {
                 "gene_id" => gene_id = Some(value),
                 "gene_name" => gene_name = Some(value),
@@ -180,7 +183,6 @@ impl GtfRecord {
                 }, 
                 _ => {}
             }
-
         }
         GtfRecord::new(
             seqname, source, feature, start, end, score, strand, frame,

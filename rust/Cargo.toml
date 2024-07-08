@@ -1,7 +1,10 @@
 [package]
 name = "rust"
 version = "0.1.0"
+edition = "2021"
 authors = ["Chris cyogodzi@gmail.com"]
+
+[dependencies]
 
 [lib]
 name = "gtf_tools"

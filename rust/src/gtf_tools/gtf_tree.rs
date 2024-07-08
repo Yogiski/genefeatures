@@ -1,8 +1,8 @@
 use std::fs::File;
-use std::io::{self, BufRead};
 use std::path::Path;
-use gtf_record::GtfRecord;
-use gtf_searcher::GtfSearcher;
+use std::io::{self, BufRead};
+use std::collections::VecDeque;
+use crate::gtf_record::GtfRecord;
 
 
 #[derive(Debug)]
@@ -14,10 +14,12 @@ pub enum NodeType {
     NonCds(NonCds),
 }
 
-pub trait Node {
-    fn add_record(&mut self, record: GtfRecord) {}
 
+pub trait Node {
+    fn add_record(&mut self, _record :GtfRecord) {}
+    fn process_staged_records(&mut self) {}
 }
+
 
 #[derive(Debug)]
 pub struct Cds {
@@ -36,6 +38,7 @@ impl Node for Cds {
     }
 }
 
+
 #[derive(Debug)]
 pub struct NonCds {
     pub records: Vec<GtfRecord>,
@@ -53,15 +56,14 @@ impl Node for NonCds {
     }
 }
 
+
 #[derive(Debug)]
 pub struct Transcript {
     pub record: GtfRecord,
-    pub cds_records: Cds, 
+    pub cds_records: Cds,
     pub non_cds_records: NonCds
 }
-
 impl Transcript {
-
     fn new(record: GtfRecord) -> Self {
         Transcript {
             record,
@@ -79,67 +81,77 @@ impl Node for Transcript {
     }
 }
 
+
 #[derive(Debug)]
 pub struct Gene {
     pub record: GtfRecord,
     pub transcripts: Vec<Transcript>,
+    staging: VecDeque<GtfRecord>
 }
 impl Gene {
-
     fn new(record: GtfRecord) -> Self {
         Gene {
             record,
-            transcripts: Vec::new()
+            transcripts: Vec::new(),
+            staging: VecDeque::new()
         }
-    }
-
-    fn add_transcript(&mut self, transcript: Transcript) {
-        self.transcripts.push(transcript)
     }
 }
 impl Node for Gene {
 
     fn add_record(&mut self, record: GtfRecord) {
-        match record.feature.as_ref() {
-            "transcript" => self.add_transcript(Transcript::new(record)),
-            _ => for t in self.transcripts.iter_mut() {
-                if record.transcript_id == t.record.transcript_id {
-                    t.add_record(record);
-                    break
-                }
+
+        if let Some(transcript) = self.transcripts.iter_mut().find(|t| t.record.transcript_id == record.transcript_id) {
+            transcript.add_record(record)
+        } else {
+            match record.feature.as_ref() {
+                "transcript" => self.transcripts.push(Transcript::new(record)),
+                _ => self.staging.push_back(record)
             }
         }
     }
+    fn process_staged_records(&mut self) {
+        while let Some(record) = self.staging.pop_front() {
+            self.add_record(record);
+        }
+    }
 }
+
 
 #[derive(Debug)]
 pub struct Contig {
     pub genes: Vec<Gene>,
-    pub name: String
+    pub name: String,
+    staging: VecDeque<GtfRecord>
 }
 impl Contig {
-
     fn new(name: String) -> Self {
-        Contig {name, genes: Vec::new()}
-    }
-
-    fn add_gene(&mut self, gene: Gene) {
-        self.genes.push(gene)
+        Contig {
+            name,
+            genes: Vec::new(),
+            staging: VecDeque::new()
+        }
     }
 }
 impl Node for Contig {
     fn add_record(&mut self, record: GtfRecord) { 
-        match record.feature.as_ref() {
-            "gene" => self.add_gene(Gene::new(record)),
-            _ => for g in self.genes.iter_mut() {
-                if g.record.gene_id == record.gene_id {
-                    g.add_record(record);
-                    break
-                }
+
+        if let Some(gene) = self.genes.iter_mut().find(|g| g.record.gene_id == record.gene_id) {
+            gene.add_record(record) 
+        } else {
+            match record.feature.as_ref() {
+                "gene" => self.genes.push(Gene::new(record)),
+                _ => self.staging.push_back(record)
             }
         }
     }
+    fn process_staged_records(&mut self) {
+        while let Some(record) = self.staging.pop_front() {
+            self.add_record(record);
+        }
+    }
 }
+
 
 
 #[derive(Debug)]
@@ -152,8 +164,7 @@ pub struct GtfTree {
     pub genebuild_last_updated: Option<String>
 }
 impl GtfTree {
-
-    fn new() -> Self {
+    pub fn new() -> Self {
         GtfTree {
             contigs: Vec::new(),
             genome_build: None,
@@ -163,12 +174,10 @@ impl GtfTree {
             genebuild_last_updated: None
         }
     }
-
-    fn add_contig(&mut self, contig: Contig) {
+    pub fn add_contig(&mut self, contig: Contig) {
         self.contigs.push(contig)
     }
-
-    fn add_metadata(&mut self, key: &str, val: &str) {
+    pub fn add_metadata(&mut self, key: &str, val: &str) {
         match key {
             "genome-build" => self.genome_build = Some(val.to_string()),
             "genome-version" => self.genome_version = Some(val.to_string()),
@@ -178,36 +187,46 @@ impl GtfTree {
             _ => {}
         }
     }
+    pub fn parse_gtf_file(gtf_path: &Path) -> Self {
 
-    fn parse_gtf_file(gtf_path: &Path) -> Self {
-
-        let gtf: File = match File::open(gtf_path) {
-            Ok(gtf) => gtf,
-            Err(gtf) => panic!(gtf)
-        };
+        let gtf: File = File::open(gtf_path).expect("Failed to open GTF file");
         let mut gtf_tree: GtfTree = GtfTree::new();
 
         for line in io::BufReader::new(gtf).lines() {
-            let mut to_record = match line {
-                Ok(l) => l,  
-                Err(_) => continue
-            };
+            let to_record = line.expect("Failed to read line");
             if to_record.starts_with("#!") {
-                let mut iter: std::str::Split<&str> = to_record
+                let mut iter: std::str::SplitN<&str> = to_record
                     .strip_prefix("#!")
                     .expect("invalid metadata line!")
-                    .split(" ");
+                    .splitn(2, " ");
                 let key: &str = iter.next().expect("invalid metadata key");
                 let val: &str = iter.next().expect("invalid metadata value");
                 gtf_tree.add_metadata(key, val);
             } else {
                 let record = GtfRecord::from_gtf_line(&to_record);
+                gtf_tree.add_record(record)
             }
         }
+        gtf_tree.process_staged_records();
         gtf_tree
     }
 }
 impl Node for GtfTree {
+
     fn add_record(&mut self, record: GtfRecord) {
+
+        let seqname: String = record.seqname.clone().into_string();
+        if let Some(contig) = self.contigs.iter_mut().find(|c| c.name == seqname) {
+            contig.add_record(record)
+        } else {
+            let mut new_contig = Contig::new(seqname);
+            new_contig.add_record(record);
+            self.add_contig(new_contig);
+        }
+    }
+    fn process_staged_records(&mut self) {
+        for contig in self.contigs.iter_mut() {
+            contig.process_staged_records()
+        }
     }
 }

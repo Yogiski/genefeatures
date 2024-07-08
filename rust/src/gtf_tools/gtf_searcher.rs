@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use gtf_record::GtfRecord;
+use crate::gtf_record::GtfRecord;
+
 
 #[derive(Debug, PartialEq)]
 pub enum GtfRecordValue<'a> {

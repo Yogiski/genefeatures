@@ -4,7 +4,7 @@ use std::collections::HashMap;
 #[derive(Debug, PartialEq)]
 pub enum GtfRecordValue <'a> {
     Str(&'a str),
-    U32(u32),
+    U64(u64),
     U8(u8),
     F64(f64),
     OptStr(Option<&'a str>),
@@ -30,8 +30,8 @@ impl <'a>GtfSearcher<'a> {
             "seqname" => GtfRecordValue::Str(&record.seqname),
             "source" => GtfRecordValue::Str(&record.source),
             "feature" => GtfRecordValue::Str(&record.feature),
-            "start" => GtfRecordValue::U32(record.start),
-            "end" => GtfRecordValue::U32(record.end),
+            "start" => GtfRecordValue::U64(record.start),
+            "end" => GtfRecordValue::U64(record.end),
             "score" => GtfRecordValue::F64(record.score),
             "frame" => GtfRecordValue::U8(record.frame),
             "gene_id" => GtfRecordValue::OptStr(record.gene_id.as_deref()),
@@ -68,7 +68,7 @@ impl <'a>GtfSearcher<'a> {
     ) -> bool {
         match (condition, record_value) {
             (GtfRecordValue::Str(cond), GtfRecordValue::Str(val)) => cond == val,
-            (GtfRecordValue::U32(cond), GtfRecordValue::U32(val)) => cond == val,
+            (GtfRecordValue::U64(cond), GtfRecordValue::U64(val)) => cond == val,
             (GtfRecordValue::U8(cond), GtfRecordValue::U8(val)) => cond == val,
             (GtfRecordValue::F64(cond), GtfRecordValue::F64(val)) => cond == val,
             (GtfRecordValue::OptStr(cond), GtfRecordValue::OptStr(val)) => cond == val,

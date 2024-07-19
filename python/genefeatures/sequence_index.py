@@ -11,7 +11,7 @@ class SequenceIndex:
     genomic_range: str = field(init=False)
     genomic_idx: Dict[int, int] = field(init=False, default_factory=dict)
     transcript_idx: Dict[str, int] = field(init=False, default_factory=dict)
-    change_log: List[Tuple[str, int, int]] = field(
+    change_log: List[Tuple[str, int, int, int]] = field(
         init=False, default_factory=list
     )
 

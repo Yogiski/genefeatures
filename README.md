@@ -1,4 +1,4 @@
-# genefeatures
+# GeneFeatures
 
 Primary functionality of GeneFeatures is to be able to generate fasta files with mutated dna sequences. GeneFeatures takes in a set of genes/transcripts and mutations with a corresponding reference fasta and gtf and returns a fasta of mutated dna sequences. Mutation formats accepted are DNA change and protein change, respective examples: g.76C>T, p.G12C.
 

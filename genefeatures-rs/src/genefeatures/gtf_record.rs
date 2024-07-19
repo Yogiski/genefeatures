@@ -3,8 +3,8 @@ pub struct GtfRecord {
     pub seqname: Box<str>,
     pub source: Box<str>,
     pub feature: Box<str>,
-    pub start: u32,
-    pub end: u32,
+    pub start: u64,
+    pub end: u64,
     pub score: f64,
     pub strand: Box<str>,
     pub frame: u8,
@@ -33,8 +33,8 @@ impl GtfRecord {
         seqname: Box<str>,
         source: Box<str>,
         feature: Box<str>,
-        start: u32,
-        end: u32,
+        start: u64,
+        end: u64,
         score: f64,
         strand: Box<str>,
         frame: u8,
@@ -99,8 +99,8 @@ impl GtfRecord {
         let seqname: Box<str> = Box::from(fields[0]);
         let source: Box<str> = Box::from(fields[1]);
         let feature: Box<str> = Box::from(fields[2]);
-        let start: u32 = fields[3].parse::<u32>().expect("Invalid start field");
-        let end: u32 = fields[4].parse::<u32>().expect("Invalid end field");
+        let start: u64 = fields[3].parse::<u64>().expect("Invalid start field");
+        let end: u64 = fields[4].parse::<u64>().expect("Invalid end field");
         let score: f64 = match fields[5] {
             "." => 0.0,
             _ => fields[5].parse::<f64>().expect("Invalid score field"),

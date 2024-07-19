@@ -24,7 +24,9 @@ impl FromStr for Strand {
 }
 
 
-// Helper functions for Sequence Index generation
+///// HELPER FUNCTIONS FOR SEQUENCE INDEX GENERATION  //////
+
+// Gathers variables needed to generate sequence index
 fn get_index_variables(transcript: &mut Transcript) -> (u64, u64, Strand, &mut Vec<GtfRecord>) {
     let strand: Strand = Strand::from_str(transcript.record.strand.as_ref())
         .expect("Cannot generate strand enum from transcript");
@@ -44,6 +46,7 @@ fn get_index_variables(transcript: &mut Transcript) -> (u64, u64, Strand, &mut V
 } 
 
 
+// Gets start and end values from a CDS record, accounts for strand
 fn get_interval_indices(strand: &Strand, rec: &GtfRecord) -> (u64, u64) {
     match strand {
         Strand::Pos | Strand::NotSpecified => (rec.start, rec.end + 1),
@@ -51,7 +54,7 @@ fn get_interval_indices(strand: &Strand, rec: &GtfRecord) -> (u64, u64) {
     }
 }
 
-
+// Adds elements with correct prefix and index to the mutation index
 fn extend_mutation_index(
     mut_idx: &mut Vec<String>, start: u64, end: u64, prefix: String
 ) {
@@ -61,6 +64,7 @@ fn extend_mutation_index(
 }
 
 
+// Gerates index values for pre-start UTR and the first CDS
 fn process_pre_tss_utr_and_first_cds(
     mutation_index: &mut Vec<String>,
     strand: &Strand,
@@ -92,6 +96,7 @@ fn process_pre_tss_utr_and_first_cds(
 }
 
 
+// Intronic portions of the index are relative to the nearest CDS, so they are processed in halves
 fn process_intron_halves(mutation_index: &mut Vec<String>, i_start: u64, last_cds_end: u64, cds_idx: u64) {
 
     let intron_len = i_start
@@ -119,6 +124,7 @@ fn process_intron_halves(mutation_index: &mut Vec<String>, i_start: u64, last_cd
 }
 
 
+// Iterate through CDS records generating index values as it goes, checks for and processes introns
 fn process_cds_and_introns<'a>(
     mutation_index: &mut Vec<String>,
     cds: &mut impl Iterator<Item=&'a mut GtfRecord>,
@@ -150,6 +156,9 @@ fn process_cds_and_introns<'a>(
         cds_idx += cds_len;
     }
 }
+
+
+//// SEQUENCE INDEX DEFINITION AND IMPLEMENTATION ////
 
 
 #[derive(Debug)]
@@ -211,7 +220,7 @@ impl SeqIdx {
         );
         //return mutation index
         mutation_index.into_iter()
-            .zip( Range { start: 0, end: end.abs_diff(start) }.into_iter() )
+            .zip( Range { start: 0, end: end.abs_diff(start) } .into_iter() )
             .collect()
     }
 }

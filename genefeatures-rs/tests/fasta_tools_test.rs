@@ -7,9 +7,11 @@ mod tests {
 
     #[test]
     fn test_call_samtools_faidx() {
-
         let res_seq = call_samtools_faidx(
-            "tests/data/trunc_hs.grch38.dna.chr1.fa", "1", 3069260, 3069262
+            "tests/data/trunc_hs.grch38.dna.chr1.fa",
+            "1",
+            3069260,
+            3069262,
         );
 
         match res_seq {
@@ -17,7 +19,7 @@ mod tests {
             Err(e) => {
                 eprintln!("error extracting sequence {}", e);
                 assert!(false)
-            } 
+            }
         }
     }
 }

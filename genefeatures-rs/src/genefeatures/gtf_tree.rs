@@ -5,7 +5,6 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-
 pub trait Node {
     fn add_record(&mut self, _record: GtfRecord) {}
     fn process_staged_records(&mut self) {}
@@ -13,7 +12,6 @@ pub trait Node {
         None
     }
 }
-
 
 #[derive(Debug)]
 pub struct Cds {
@@ -116,7 +114,6 @@ impl Node for Gene {
     }
 }
 
-
 #[derive(Debug)]
 pub struct Contig {
     pub genes: Vec<Gene>,
@@ -153,12 +150,9 @@ impl Node for Contig {
         }
     }
     fn find_transcript<'a>(&'a self, searcher: &mut GtfSearcher<'a>) -> Option<&Transcript> {
-        self.genes
-            .iter()
-            .find_map(|g| g.find_transcript(searcher))
+        self.genes.iter().find_map(|g| g.find_transcript(searcher))
     }
 }
-
 
 #[derive(Debug)]
 pub struct GtfTree {

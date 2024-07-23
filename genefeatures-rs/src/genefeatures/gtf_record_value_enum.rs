@@ -1,8 +1,7 @@
 use crate::gtf_record::GtfRecord;
 
-
 #[derive(Debug, PartialEq)]
-pub enum GtfRecordValue <'a> {
+pub enum GtfRecordValue<'a> {
     Str(&'a str),
     U64(u64),
     U8(u8),
@@ -13,53 +12,49 @@ pub enum GtfRecordValue <'a> {
     NoMatch,
 }
 
-impl <'a>From<&'a str> for GtfRecordValue<'a> {
+impl<'a> From<&'a str> for GtfRecordValue<'a> {
     fn from(val: &'a str) -> Self {
         GtfRecordValue::Str(val)
     }
-} 
-impl <'a>From<&'a Box<str>> for GtfRecordValue<'a> {
+}
+impl<'a> From<&'a Box<str>> for GtfRecordValue<'a> {
     fn from(val: &'a Box<str>) -> Self {
         GtfRecordValue::Str(val)
     }
-} 
-impl <'a>From<u64> for GtfRecordValue<'a> {
+}
+impl<'a> From<u64> for GtfRecordValue<'a> {
     fn from(val: u64) -> Self {
         GtfRecordValue::U64(val)
     }
-} 
-impl <'a>From<u8> for GtfRecordValue<'a> {
+}
+impl<'a> From<u8> for GtfRecordValue<'a> {
     fn from(val: u8) -> Self {
         GtfRecordValue::U8(val)
     }
-} 
-impl <'a>From<f64> for GtfRecordValue<'a> {
+}
+impl<'a> From<f64> for GtfRecordValue<'a> {
     fn from(val: f64) -> Self {
         GtfRecordValue::F64(val)
     }
 }
-impl <'a>From<Option<&'a str>> for GtfRecordValue<'a> {
+impl<'a> From<Option<&'a str>> for GtfRecordValue<'a> {
     fn from(val: Option<&'a str>) -> Self {
         GtfRecordValue::OptStr(val)
     }
 }
-impl <'a>From<Option<u8>> for GtfRecordValue<'a> {
+impl<'a> From<Option<u8>> for GtfRecordValue<'a> {
     fn from(val: Option<u8>) -> Self {
         GtfRecordValue::OptU8(val)
     }
 }
-impl <'a>From<Option<&'a Vec<Box<str>>>> for GtfRecordValue<'a> {
+impl<'a> From<Option<&'a Vec<Box<str>>>> for GtfRecordValue<'a> {
     fn from(val: Option<&'a Vec<Box<str>>>) -> Self {
-        GtfRecordValue::OptVecStr( 
-            val.map(|v| v.iter().map(|s| &**s).collect())
-        )
+        GtfRecordValue::OptVecStr(val.map(|v| v.iter().map(|s| &**s).collect()))
     }
 }
 
-impl <'a>GtfRecordValue<'a> {
-
+impl<'a> GtfRecordValue<'a> {
     pub fn get_value_from_gtf_record(record: &'a GtfRecord, field: &str) -> Self {
-
         match field {
             "seqname" => GtfRecordValue::from(&record.seqname),
             "source" => GtfRecordValue::from(&record.source),

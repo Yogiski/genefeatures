@@ -35,6 +35,5 @@ class TestGeneFeature(unittest.TestCase):
         self.assertIsInstance(gf.transcripts[ids[0]], SequenceTree)
         self.assertNotEqual(gf.transcripts[ids[0]], gf.transcripts[ids[1]])
 
-
 if __name__ == '__main__':
     unittest.main()

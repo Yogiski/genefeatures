@@ -2,7 +2,8 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use crate::gtf_searcher::{GtfSearcher, GtfRecordValue};
+use crate::gtf_searcher::GtfSearcher;
+use crate::gtf_record_value_enum::GtfRecordValue;
 use crate::gtf_tree::{GtfTree, Transcript, Node};
 
 
@@ -88,13 +89,5 @@ pub fn main(gtf: &String, fasta: &String, genes: &String, model: &String) {
 
     println!("Reading gtf file: {}", gtf);
     let gtf:GtfTree  = GtfTree::parse_gtf_file(Path::new(gtf));
-    let transcripts = find_matching_records(&gtf, &mut searchers);
-
-
-
-
-
-
-
-
+    let transcripts: Vec<Option<&Transcript>> = find_matching_records(&gtf, &mut searchers);
 }

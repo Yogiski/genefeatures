@@ -28,14 +28,16 @@ impl FromStr for Strand {
 
 // Gathers variables needed to generate sequence index
 fn get_index_variables(transcript: &mut Transcript) -> (u64, u64, Strand, &mut Vec<GtfRecord>) {
+
     let strand: Strand = Strand::from_str(transcript.record.strand.as_ref())
         .expect("Cannot generate strand enum from transcript");
     let cds: &mut Vec<GtfRecord> = &mut transcript.cds_records.records;
-        // find start and end of entire transcript accounting for strand 
+
+    // find start and end of entire transcript accounting for strand 
     let (start, end): (u64, u64) = match strand {
         Strand::Pos | Strand::NotSpecified => {
             cds.sort_by_key(|rec| rec.start);
-            ( transcript.record.start, transcript.record.end)
+            (transcript.record.start, transcript.record.end)
         },
         Strand::Neg => {
             cds.sort_by_key(|rec| rec.end);

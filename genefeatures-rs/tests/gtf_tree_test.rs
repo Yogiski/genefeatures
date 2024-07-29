@@ -4,7 +4,7 @@ use std::path::Path;
 extern crate genefeatures;
 use genefeatures::gtf_record_value_enum::GtfRecordValue;
 use genefeatures::gtf_searcher::GtfSearcher;
-use genefeatures::gtf_tree::{Cds, Contig, Gene, GtfTree, Node, NonCds, Transcript};
+use genefeatures::gtf_tree::{GtfTree, Node, Transcript};
 
 #[cfg(test)]
 mod tests {

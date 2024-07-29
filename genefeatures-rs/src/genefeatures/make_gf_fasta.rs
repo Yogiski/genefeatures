@@ -59,10 +59,11 @@ fn find_matching_records<'a>(
     gtf: &'a GtfTree,
     searchers: &mut Vec<GtfSearcher<'a>>,
 ) -> Vec<Option<&'a Transcript>> {
-    searchers
-        .iter_mut()
-        .map(|s| gtf.find_transcript(s))
-        .collect()
+    let mut results: Vec<Option<&Transcript>> = Vec::with_capacity(searchers.len());
+    for s in searchers.iter_mut() {
+        results.push(gtf.find_transcript(s))
+    }
+    results
 }
 
 pub fn main(gtf: &String, fasta: &String, genes: &String, model: &String) {

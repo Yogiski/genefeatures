@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GtfRecord {
     pub seqname: Box<str>,
     pub source: Box<str>,
@@ -203,5 +203,31 @@ impl GtfRecord {
             ccds_id,
             tag,
         )
+    }
+}
+
+#[derive(Debug)]
+pub struct GtfRecordView<'a> {
+    pub seqname: &'a Box<str>,
+    pub source: &'a Box<str>,
+    pub feature: &'a Box<str>,
+    pub start: &'a u64,
+    pub end: &'a u64,
+    pub score: &'a f64,
+    pub strand: &'a Box<str>,
+    pub frame: &'a u8,
+}
+impl<'a> GtfRecordView<'a> {
+    pub fn new(record: &'a GtfRecord) -> Self {
+        Self {
+            seqname: &record.seqname,
+            source: &record.source,
+            feature: &record.feature,
+            start: &record.start,
+            end: &record.end,
+            score: &record.score,
+            strand: &record.strand,
+            frame: &record.frame,
+        }
     }
 }

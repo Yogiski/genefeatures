@@ -30,7 +30,7 @@ impl<'a> GtfSearcher<'a> {
         }
     }
 
-    pub fn find_match(&mut self, record: &'a GtfRecord) -> bool {
+    pub fn find_match(&self, record: &'a GtfRecord) -> bool {
         let mut all_match: bool = true;
         for (field, condition) in &self.condition {
             let record_value: GtfRecordValue =

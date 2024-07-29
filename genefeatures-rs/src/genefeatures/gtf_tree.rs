@@ -8,12 +8,12 @@ use std::path::Path;
 pub trait Node {
     fn add_record(&mut self, _record: GtfRecord) {}
     fn process_staged_records(&mut self) {}
-    fn find_transcript<'a>(&'a self, _searcher: &mut GtfSearcher<'a>) -> Option<&Transcript> {
+    fn find_transcript<'a>(&'a self, _searcher: &GtfSearcher<'a>) -> Option<&Transcript> {
         None
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Cds {
     pub records: Vec<GtfRecord>,
 }
@@ -30,7 +30,7 @@ impl Node for Cds {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NonCds {
     pub records: Vec<GtfRecord>,
 }
@@ -47,7 +47,7 @@ impl Node for NonCds {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Transcript {
     pub record: GtfRecord,
     pub cds_records: Cds,
@@ -71,7 +71,7 @@ impl Node for Transcript {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Gene {
     pub record: GtfRecord,
     pub transcripts: Vec<Transcript>,
@@ -107,14 +107,14 @@ impl Node for Gene {
         }
     }
 
-    fn find_transcript<'a>(&'a self, searcher: &mut GtfSearcher<'a>) -> Option<&Transcript> {
+    fn find_transcript<'a>(&'a self, searcher: &GtfSearcher<'a>) -> Option<&Transcript> {
         self.transcripts
             .iter()
             .find(|t| searcher.find_match(&t.record))
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Contig {
     pub genes: Vec<Gene>,
     pub name: String,
@@ -149,12 +149,12 @@ impl Node for Contig {
             self.add_record(record);
         }
     }
-    fn find_transcript<'a>(&'a self, searcher: &mut GtfSearcher<'a>) -> Option<&Transcript> {
+    fn find_transcript<'a>(&'a self, searcher: &GtfSearcher<'a>) -> Option<&Transcript> {
         self.genes.iter().find_map(|g| g.find_transcript(searcher))
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GtfTree {
     pub contigs: Vec<Contig>,
     pub genome_build: Option<String>,
@@ -226,7 +226,7 @@ impl Node for GtfTree {
             contig.process_staged_records()
         }
     }
-    fn find_transcript<'a>(&'a self, searcher: &mut GtfSearcher<'a>) -> Option<&Transcript> {
+    fn find_transcript<'a>(&'a self, searcher: &GtfSearcher<'a>) -> Option<&Transcript> {
         self.contigs
             .iter()
             .find_map(|c| c.find_transcript(searcher))

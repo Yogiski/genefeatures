@@ -206,7 +206,8 @@ impl GtfRecord {
     }
 }
 
-#[derive(Debug)]
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct GtfRecordView<'a> {
     pub seqname: &'a Box<str>,
     pub source: &'a Box<str>,

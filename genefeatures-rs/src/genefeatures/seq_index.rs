@@ -75,12 +75,12 @@ fn process_pre_tss_utr_and_first_cds(
     let (i_start, i_end): (u64, u64) =
         get_interval_indices(strand, rec.expect("not record view found"));
     // Process pre tss utr index
-    let idx_iter: Box< dyn Iterator< Item = u64>> = Box::new((1..=start.abs_diff(i_start)).rev());
+    let idx_iter: Box<dyn Iterator<Item = u64>> = Box::new((1..=start.abs_diff(i_start)).rev());
     extend_mutation_index(mutation_index, idx_iter, "-".to_string());
     // process first cds
 
     let cds_len = i_end.abs_diff(i_start);
-    let idx_iter: Box< dyn Iterator< Item = u64>> = Box::new(1..=cds_len);
+    let idx_iter: Box<dyn Iterator<Item = u64>> = Box::new(1..=cds_len);
     extend_mutation_index(mutation_index, idx_iter, "".to_string());
     cds_idx += cds_len;
     (i_end, cds_idx)
@@ -173,7 +173,8 @@ impl SeqIdx {
 
     fn init_genomic_index(start: u64, end: u64, strand: &Strand) -> HashMap<u64, u64> {
 
-        let (genomic_pos, seq_len): (Box< dyn Iterator<Item = u64>>, u64) = match strand {
+        let (genomic_pos, seq_len): (Box< dyn Iterator<Item = u64>>, u64) =
+        match strand {
             Strand::Pos | Strand::NotSpecified => 
                 (Box::new(start..end), end.abs_diff(start)),
             Strand::Neg =>
@@ -200,7 +201,7 @@ impl SeqIdx {
         //process introns and remaining cds intervals
         process_cds_and_introns(&mut mutation_index, cds, cds_idx, strand, last_cds_end);
         // process post stop UTR
-        let iter_idx: Box<dyn Iterator< Item = u64>> = Box::new(1..end.abs_diff(last_cds_end)); 
+        let iter_idx: Box<dyn Iterator<Item = u64>> = Box::new(1..end.abs_diff(last_cds_end)); 
         extend_mutation_index(&mut mutation_index, iter_idx, "*".to_string());
         //return mutation index
         mutation_index

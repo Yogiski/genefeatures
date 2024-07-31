@@ -112,6 +112,33 @@ mod tests {
     }
 
     #[test]
+    fn test_forward_seq_first_pos() {
+        let (_, seq_idx): (Transcript, SeqIdx) = setup_seq_index("+");
+        assert_eq!(seq_idx.mutation_index["-261"], 0);
+    }
+
+    #[test]
+    fn test_reverse_seq_first_pos() {
+        let (_, seq_idx): (Transcript, SeqIdx) = setup_seq_index("-");
+        assert_eq!(seq_idx.mutation_index["-5545"], 0);
+    }
+
+    #[test]
+    fn test_reverse_seq_last_pos() {
+        let (trans, seq_idx): (Transcript, SeqIdx) = setup_seq_index("-");
+        let seq_len = trans.record.end.abs_diff(trans.record.start);
+        assert_eq!(seq_idx.mutation_index["*4552"], seq_len);
+    }
+
+    #[test]
+    fn test_intron_indices_reverse() {
+        let (_, seq_idx): (Transcript, SeqIdx) = setup_seq_index("-");
+        assert_eq!(seq_idx.mutation_index["112-1"], seq_idx.mutation_index["112"] - 1);
+        assert_eq!(seq_idx.mutation_index["111+1"], seq_idx.mutation_index["111"] + 1);
+    }
+
+
+    #[test]
     fn test_forward_seq_tss_idx_seq() {
         let (_, seq_idx): (Transcript, SeqIdx) = setup_seq_index("+");
         let seq: Seq<Dna> = read_forward_seq();
@@ -150,6 +177,4 @@ mod tests {
         let tss_seq: Seq<Dna> = dna!["TGA"].into();
         assert_eq!(seq[tss_i..tss_f], tss_seq)
     }
-
-
 }

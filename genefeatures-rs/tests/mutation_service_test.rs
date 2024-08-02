@@ -2,16 +2,15 @@ extern crate genefeatures;
 use bio_seq::prelude::*;
 use genefeatures::mutation_service::{self, MutRegex};
 
-
 #[cfg(test)]
 mod tests {
 
     use super::*;
 
-    #[test] 
+    #[test]
     fn test_sub_regex_match() {
         let mt: MutRegex = MutRegex::Sub;
-        assert!(mt.is_match("76A>T")); 
+        assert!(mt.is_match("76A>T"));
     }
 
     #[test]
@@ -100,10 +99,12 @@ mod tests {
     fn test_index_regex_match() {
         let mt: MutRegex = MutRegex::InDel;
         assert_eq!(mt.get_recipe("34_36delinsTAA"), ["34", "36", "TAA"]);
-        assert_eq!(mt.get_recipe("34_36delGGTinsTAA"), ["34", "36", "GGT", "TAA"])
+        assert_eq!(
+            mt.get_recipe("34_36delGGTinsTAA"),
+            ["34", "36", "GGT", "TAA"]
+        )
     }
 
     #[test]
-    fn test_mutate_sequence_dup() {
-    }
+    fn test_mutate_sequence_dup() {}
 }

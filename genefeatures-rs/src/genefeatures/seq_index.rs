@@ -2,7 +2,7 @@ use crate::gtf_record::GtfRecordView;
 use crate::gtf_tree::Transcript;
 use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::ops::{Div, Range};
+use std::ops::Div;
 use std::str::FromStr;
 
 #[derive(Debug, PartialEq)]

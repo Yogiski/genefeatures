@@ -6,13 +6,13 @@ use regex::{Captures, Regex};
 // Compile all regex strings statically
 lazy_static! {
     static ref SUB: Regex = Regex::new(r"(\d+)([ACGT])>([ACGT])").unwrap();
-    static ref PNTDEL: Regex = Regex::new(r"(\d+)del([ACGT]*)").unwrap();
-    static ref RNGDEL: Regex = Regex::new(r"(\d+)_(\d+)del([ACGT]*)").unwrap();
+    static ref PNTDEL: Regex = Regex::new(r"^(\d+)del([ACGT]*)").unwrap();
+    static ref RNGDEL: Regex = Regex::new(r"^(\d+)_(\d+)del([ACGT]*)").unwrap();
     static ref INS: Regex = Regex::new(r"(\d+)_(\d+)ins([ACGT]+)").unwrap();
     static ref DUP: Regex = Regex::new(r"(\d+)_(\d+)dup([ACGT]*)").unwrap();
     static ref INV: Regex = Regex::new(r"(\d+)_(\d+)inv(\d*)").unwrap();
     static ref INDEL: Regex =
-        Regex::new(r"(\d+)_(\d+)delins([ACGT]+)|(\d+)_(\d+)del([ACGT]+)ins([ACGT]+)").unwrap();
+        Regex::new(r"^(\d+)_(\d+)delins([ACGT]+)|^(\d+)_(\d+)del([ACGT]+)ins([ACGT]+)").unwrap();
 }
 
 #[derive(Debug, Clone)]
@@ -84,7 +84,7 @@ pub fn process_mutation(mutation: String, seq: Seq<Dna>, seq_idx: SeqIdx) -> Seq
             MutRegex::Inv => dna_inv(seq, seq_idx, mr.get_recipe(&mutation)),
         }
     } else {
-        return seq;
+        seq
     }
 }
 
@@ -115,7 +115,8 @@ fn dna_sub(seq: Seq<Dna>, seq_idx: SeqIdx, recipe: Vec<&str>) -> Seq<Dna> {
 }
 
 fn dna_point_del(seq: Seq<Dna>, seq_idx: SeqIdx, recipe: Vec<&str>) -> Seq<Dna> {
-    let start: usize = seq_idx.mutation_index[recipe[0]].abs_diff(1) as usize;
+    println!("\nCALLING PNT DEL\n");
+    let start: usize = seq_idx.mutation_index[recipe[0]] as usize;
     let end: usize = start + 1;
     let seq_ref: Seq<Dna> = match recipe[1] {
         "" => seq[start].to_owned(),
@@ -128,8 +129,8 @@ fn dna_point_del(seq: Seq<Dna>, seq_idx: SeqIdx, recipe: Vec<&str>) -> Seq<Dna> 
 
 fn dna_range_del(seq: Seq<Dna>, seq_idx: SeqIdx, recipe: Vec<&str>) -> Seq<Dna> {
     let (start, end): (usize, usize) = (
-        seq_idx.mutation_index[recipe[0]].abs_diff(1) as usize,
-        seq_idx.mutation_index[recipe[1]] as usize,
+        seq_idx.mutation_index[recipe[0]] as usize,
+        (seq_idx.mutation_index[recipe[1]] + 1) as usize,
     );
     let seq_ref: Seq<Dna> = match recipe[2] {
         "" => seq[start..end].to_owned(),
